@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 
 const TOTAL_IMAGES = 9
 const SLIDE_DURATION = 10000
-const BG = '#d9d1c6'
+const BG = '#BEC6C8'
+const TEXT = '#5e2418'
 
 function App() {
   const [current, setCurrent] = useState(0)
@@ -43,7 +44,7 @@ function App() {
     setContactStatus('submitting')
     const data = new FormData(e.target)
     try {
-      const res = await fetch('https://formspree.io/f/placeholder', {
+      const res = await fetch('https://formspree.io/f/mykndezp', {
         method: 'POST', body: data, headers: { Accept: 'application/json' }
       })
       if (res.ok) { setContactStatus('success'); e.target.reset() }
@@ -59,11 +60,11 @@ function App() {
       display: 'flex',
       flexDirection: 'column',
       fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-      color: '#2a2520',
+      color: TEXT,
     }}>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Staatliches&family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500&display=swap');
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -77,36 +78,52 @@ function App() {
           background: none;
           border: none;
           cursor: pointer;
-          color: #2a2520;
-          padding: 8px 12px;
-          opacity: 0.4;
+          color: ${TEXT};
+          padding: 14px 16px;
+          opacity: 0.7;
           transition: opacity 0.2s;
           display: flex;
           align-items: center;
           justify-content: center;
         }
-        .ctrl-btn:hover { opacity: 0.9; }
+        .ctrl-btn:hover { opacity: 1; }
+
+        .contact-link {
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-family: 'Staatliches', cursive;
+          font-size: inherit;
+          font-weight: 400;
+          color: ${TEXT};
+          text-decoration: underline;
+          text-underline-offset: 3px;
+          padding: 0;
+          transition: opacity 0.2s;
+          letter-spacing: 0.06em;
+        }
+        .contact-link:hover { opacity: 0.6; }
 
         input, textarea {
           width: 100%;
           background: transparent;
           border: none;
-          border-bottom: 1px solid #b8b0a6;
+          border-bottom: 1px solid rgba(57, 18, 18, 0.35);
           padding: 8px 0;
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
           font-size: 14px;
           font-weight: 300;
-          color: #2a2520;
+          color: ${TEXT};
           outline: none;
           transition: border-color 0.2s;
         }
-        input:focus, textarea:focus { border-bottom-color: #2a2520; }
-        input::placeholder, textarea::placeholder { color: #a09890; font-size: 13px; }
+        input:focus, textarea:focus { border-bottom-color: ${TEXT}; }
+        input::placeholder, textarea::placeholder { color: rgba(57,18,18,0.4); font-size: 13px; }
         textarea { resize: none; }
 
         .submit-btn {
-          background: #2a2520;
-          color: #d9d1c6;
+          background: ${TEXT};
+          color: ${BG};
           border: none;
           padding: 11px 36px;
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -122,7 +139,7 @@ function App() {
         .contact-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(217, 209, 198, 0.97);
+          background: rgba(190, 198, 200, 0.97);
           z-index: 200;
           display: flex;
           align-items: center;
@@ -135,12 +152,21 @@ function App() {
           background: none;
           border: none;
           cursor: pointer;
-          color: #2a2520;
+          color: ${TEXT};
           opacity: 0.5;
           transition: opacity 0.2s;
           padding: 4px;
         }
         .close-btn:hover { opacity: 1; }
+
+        label {
+          font-size: 10px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(57,18,18,0.55);
+          display: block;
+          margin-bottom: 6px;
+        }
       `}</style>
 
       {/* CONTACT OVERLAY */}
@@ -148,10 +174,10 @@ function App() {
         <div className="contact-overlay">
           <div style={{ maxWidth: '480px', width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' }}>
-              <h2 style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 300, fontSize: '28px', letterSpacing: '-0.02em' }}>
+              <h2 style={{ fontFamily: "'Staatliches', cursive", fontWeight: 400, fontSize: '36px', letterSpacing: '0.04em', color: TEXT }}>
                 Get in touch
               </h2>
-              <button className="close-btn" onClick={() => setShowContact(false)}>
+              <button className="close-btn" onClick={() => { setShowContact(false); setContactStatus('idle') }}>
                 <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <line x1="4" y1="4" x2="16" y2="16"/><line x1="16" y1="4" x2="4" y2="16"/>
                 </svg>
@@ -159,27 +185,27 @@ function App() {
             </div>
 
             {contactStatus === 'success' ? (
-              <p style={{ fontSize: '16px', fontWeight: 300, lineHeight: 1.7, color: '#5a5248' }}>
+              <p style={{ fontSize: '16px', fontWeight: 300, lineHeight: 1.7, color: TEXT, opacity: 0.7 }}>
                 Thank you — Mikayla will be in touch shortly.
               </p>
             ) : (
               <form onSubmit={handleContact} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                   <div>
-                    <label style={{ fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#8a8078', display: 'block', marginBottom: '6px' }}>Name</label>
+                    <label>Name</label>
                     <input type="text" name="name" required placeholder="Your name" />
                   </div>
                   <div>
-                    <label style={{ fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#8a8078', display: 'block', marginBottom: '6px' }}>Email</label>
+                    <label>Email</label>
                     <input type="email" name="email" required placeholder="your@email.com" />
                   </div>
                 </div>
                 <div>
-                  <label style={{ fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#8a8078', display: 'block', marginBottom: '6px' }}>Message</label>
+                  <label>Message</label>
                   <textarea name="message" rows={4} required placeholder="Tell me about your project..." />
                 </div>
                 {contactStatus === 'error' && (
-                  <p style={{ fontSize: '12px', color: '#8b3a3a' }}>Something went wrong — please try again.</p>
+                  <p style={{ fontSize: '12px', color: TEXT, opacity: 0.6 }}>Something went wrong — please try again.</p>
                 )}
                 <div>
                   <button type="submit" className="submit-btn" disabled={contactStatus === 'submitting'}>
@@ -193,22 +219,33 @@ function App() {
       )}
 
       {/* HEADER */}
-      <header style={{ textAlign: 'center', padding: '32px 40px 20px', flexShrink: 0 }}>
+      <header style={{ textAlign: 'center', padding: '44px 40px 36px', flexShrink: 0 }}>
         <h1 style={{
-          fontFamily: "'Bricolage Grotesque', sans-serif",
-          fontWeight: 300,
-          fontSize: 'clamp(22px, 3vw, 38px)',
-          letterSpacing: '-0.01em',
-          color: '#2a2520',
+          fontFamily: "'Staatliches', cursive",
+          fontWeight: 400,
+          fontSize: 'clamp(32px, 5vw, 58px)',
+          letterSpacing: '0.06em',
+          color: TEXT,
+          lineHeight: 1,
         }}>
           Mikayla Exton
         </h1>
+        <p style={{
+          fontFamily: "'Staatliches', cursive",
+          fontWeight: 400,
+          fontSize: 'clamp(18px, 2.4vw, 30px)',
+          letterSpacing: '0.06em',
+          color: TEXT,
+          fontStyle: 'italic',
+          marginTop: '2px',
+          lineHeight: 1,
+        }}>
+          Photography
+        </p>
       </header>
 
-      {/* PHOTO — fills remaining vertical space */}
+      {/* PHOTO */}
       <div style={{ flex: 1, padding: '0 40px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-
-        {/* Fixed-height image frame — height set by CSS, width adjusts per photo */}
         <div style={{
           flex: 1,
           position: 'relative',
@@ -231,7 +268,7 @@ function App() {
         </div>
 
         {/* Controls */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', padding: '12px 0 4px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '10px 0 0', flexShrink: 0 }}>
           <button className="ctrl-btn" onClick={() => manualNav(prev_)} aria-label="Previous">
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
               <polyline points="15 18 9 12 15 6"/>
@@ -251,35 +288,19 @@ function App() {
         </div>
       </div>
 
-      {/* FOOTER — about + contact in one line */}
+      {/* FOOTER */}
       <footer style={{
         flexShrink: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '16px 40px 24px',
+        textAlign: 'center',
+        padding: '20px 40px 32px',
       }}>
-        <p style={{ fontSize: '12px', color: '#7a7268', letterSpacing: '0.02em', fontWeight: 300 }}>
-          Come say hello if you'd like some photos.
+        <p style={{ fontSize: 'clamp(14px, 1.8vw, 20px)', fontFamily: "'Staatliches', cursive", letterSpacing: '0.06em', color: TEXT, fontWeight: 400 }}>
+          Say{' '}
+          <button className="contact-link" onClick={() => setShowContact(true)}>
+            hello
+          </button>
+          {' '}if you'd like some photos
         </p>
-        <button
-          onClick={() => setShowContact(true)}
-          style={{
-            background: 'none',
-            border: '1px solid #a09890',
-            cursor: 'pointer',
-            color: '#2a2520',
-            fontSize: '11px',
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            padding: '8px 20px',
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#2a2520'; e.currentTarget.style.color = BG }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#2a2520' }}>
-          Contact
-        </button>
       </footer>
 
     </div>
