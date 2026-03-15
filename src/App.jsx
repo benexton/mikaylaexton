@@ -44,7 +44,7 @@ function App() {
     setContactStatus('submitting')
     const data = new FormData(e.target)
     try {
-      const res = await fetch('https://formspree.io/f/mykndezp', {
+      const res = await fetch('https://formspree.io/f/placeholder', {
         method: 'POST', body: data, headers: { Accept: 'application/json' }
       })
       if (res.ok) { setContactStatus('success'); e.target.reset() }
@@ -55,7 +55,7 @@ function App() {
   return (
     <div style={{
       background: BG,
-      height: '100vh',
+      height: '100dvh',
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
@@ -219,7 +219,7 @@ function App() {
       )}
 
       {/* HEADER */}
-      <header style={{ textAlign: 'center', padding: '44px 40px 36px', flexShrink: 0 }}>
+      <header style={{ textAlign: 'center', padding: 'clamp(20px, 4vw, 44px) 40px clamp(16px, 3vw, 36px)', flexShrink: 0 }}>
         <h1 style={{
           fontFamily: "'Staatliches', cursive",
           fontWeight: 400,
@@ -292,7 +292,7 @@ function App() {
       <footer style={{
         flexShrink: 0,
         textAlign: 'center',
-        padding: '20px 40px 32px',
+        padding: 'clamp(12px, 2vw, 20px) 40px clamp(16px, 3vw, 32px)',
       }}>
         <p style={{ fontSize: 'clamp(14px, 1.8vw, 20px)', fontFamily: "'Staatliches', cursive", letterSpacing: '0.06em', color: TEXT, fontWeight: 400 }}>
           Say{' '}
