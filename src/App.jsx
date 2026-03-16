@@ -53,6 +53,13 @@ function App() {
   }
 
   useEffect(() => {
+    for (let i = 1; i <= TOTAL_IMAGES; i++) {
+      const img = new Image()
+      img.src = `./${i}.jpg`
+    }
+  }, [])
+
+  useEffect(() => {
     if (showContact && window.turnstile) {
       setTimeout(() => window.turnstile.render('.cf-turnstile-mikayla'), 100)
     }
