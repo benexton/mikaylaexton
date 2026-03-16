@@ -62,11 +62,14 @@ function App() {
     <div style={{
       background: BG,
       height: '100dvh',
+      minHeight: '-webkit-fill-available',
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
       fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
       color: TEXT,
+      paddingTop: 'env(safe-area-inset-top)',
+      paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
 
       <style>{`
