@@ -77,6 +77,11 @@ function App() {
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
+        html, body {
+          background: ${BG};
+          height: 100%;
+        }
+
         .slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
         .fade-in { animation: fadeIn 0.8s ease forwards; }
         .fade-out { animation: fadeOut 0.8s ease forwards; }
