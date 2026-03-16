@@ -44,13 +44,19 @@ function App() {
     setContactStatus('submitting')
     const data = new FormData(e.target)
     try {
-      const res = await fetch('https://formspree.io/f/placeholder', {
+      const res = await fetch('https://mikaylaexton.benexton.workers.dev', {
         method: 'POST', body: data, headers: { Accept: 'application/json' }
       })
       if (res.ok) { setContactStatus('success'); e.target.reset() }
       else { setContactStatus('error'); setTimeout(() => setContactStatus('idle'), 4000) }
     } catch { setContactStatus('error'); setTimeout(() => setContactStatus('idle'), 4000) }
   }
+
+  useEffect(() => {
+    if (showContact && window.turnstile) {
+      setTimeout(() => window.turnstile.render('.cf-turnstile-mikayla'), 100)
+    }
+  }, [showContact])
 
   return (
     <div style={{
@@ -208,6 +214,12 @@ function App() {
                   <p style={{ fontSize: '12px', color: TEXT, opacity: 0.6 }}>Something went wrong — please try again.</p>
                 )}
                 <div>
+                  <div
+                    className="cf-turnstile-mikayla"
+                    data-sitekey="0x4AAAAAACrgI5LxDZueJqhg"
+                    data-theme="light"
+                    style={{ marginBottom: '16px' }}
+                  />
                   <button type="submit" className="submit-btn" disabled={contactStatus === 'submitting'}>
                     {contactStatus === 'submitting' ? 'Sending...' : 'Send Message'}
                   </button>
