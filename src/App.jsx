@@ -80,7 +80,6 @@ function App() {
     }}>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Staatliches&family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500&display=swap');
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
