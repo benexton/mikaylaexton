@@ -3,7 +3,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 const TOTAL_IMAGES = 9
 const SLIDE_DURATION = 10000
 const BG = '#BEC6C8'
-const TEXT = '#5e2418'
+const NAME_COLOR = '#5e2418'
+const SUBTEXT_COLOR = '#ffffff'
+const CTRL_COLOR = '#ffffff'
 
 function App() {
   const [current, setCurrent] = useState(0)
@@ -72,21 +74,16 @@ function App() {
       minHeight: '-webkit-fill-available',
       overflow: 'hidden',
       display: 'flex',
-      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
       fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-      color: TEXT,
       paddingTop: 'env(safe-area-inset-top)',
       paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
 
       <style>{`
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        html, body {
-          background: ${BG};
-          height: 100%;
-        }
+        html, body { background: ${BG}; height: 100%; }
 
         .slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
         .fade-in { animation: fadeIn 0.8s ease forwards; }
@@ -98,9 +95,9 @@ function App() {
           background: none;
           border: none;
           cursor: pointer;
-          color: ${TEXT};
-          padding: 14px 16px;
-          opacity: 0.7;
+          color: ${CTRL_COLOR};
+          padding: 10px 14px;
+          opacity: 0.85;
           transition: opacity 0.2s;
           display: flex;
           align-items: center;
@@ -112,37 +109,36 @@ function App() {
           background: none;
           border: none;
           cursor: pointer;
-          font-family: 'Staatliches', cursive;
+          font-family: inherit;
           font-size: inherit;
-          font-weight: 400;
-          color: ${TEXT};
-          text-decoration: underline;
-          text-underline-offset: 3px;
+          font-weight: 700;
+          font-style: oblique;
+          color: ${SUBTEXT_COLOR};
+          text-decoration: none;
           padding: 0;
           transition: opacity 0.2s;
-          letter-spacing: 0.06em;
         }
-        .contact-link:hover { opacity: 0.6; }
+        .contact-link:hover { opacity: 0.7; }
 
         input, textarea {
           width: 100%;
           background: transparent;
           border: none;
-          border-bottom: 1px solid rgba(57, 18, 18, 0.35);
+          border-bottom: 1px solid rgba(255,255,255,0.35);
           padding: 8px 0;
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
           font-size: 14px;
           font-weight: 300;
-          color: ${TEXT};
+          color: #fff;
           outline: none;
           transition: border-color 0.2s;
         }
-        input:focus, textarea:focus { border-bottom-color: ${TEXT}; }
-        input::placeholder, textarea::placeholder { color: rgba(57,18,18,0.4); font-size: 13px; }
+        input:focus, textarea:focus { border-bottom-color: #fff; }
+        input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.45); font-size: 13px; }
         textarea { resize: none; }
 
         .submit-btn {
-          background: ${TEXT};
+          background: #fff;
           color: ${BG};
           border: none;
           padding: 11px 36px;
@@ -172,8 +168,8 @@ function App() {
           background: none;
           border: none;
           cursor: pointer;
-          color: ${TEXT};
-          opacity: 0.5;
+          color: #fff;
+          opacity: 0.6;
           transition: opacity 0.2s;
           padding: 4px;
         }
@@ -183,7 +179,7 @@ function App() {
           font-size: 10px;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: rgba(57,18,18,0.55);
+          color: rgba(255,255,255,0.55);
           display: block;
           margin-bottom: 6px;
         }
@@ -194,7 +190,13 @@ function App() {
         <div className="contact-overlay">
           <div style={{ maxWidth: '480px', width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '36px' }}>
-              <h2 style={{ fontFamily: "'Staatliches', cursive", fontWeight: 400, fontSize: '36px', letterSpacing: '0.04em', color: TEXT }}>
+              <h2 style={{
+                fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+                fontWeight: 400,
+                fontSize: '32px',
+                letterSpacing: '0.02em',
+                color: '#fff'
+              }}>
                 Get in touch
               </h2>
               <button className="close-btn" onClick={() => { setShowContact(false); setContactStatus('idle') }}>
@@ -205,7 +207,7 @@ function App() {
             </div>
 
             {contactStatus === 'success' ? (
-              <p style={{ fontSize: '16px', fontWeight: 300, lineHeight: 1.7, color: TEXT, opacity: 0.7 }}>
+              <p style={{ fontSize: '16px', fontWeight: 300, lineHeight: 1.7, color: '#fff', opacity: 0.8 }}>
                 Thank you — Mikayla will be in touch shortly.
               </p>
             ) : (
@@ -225,7 +227,7 @@ function App() {
                   <textarea name="message" rows={4} required placeholder="Tell me about your project..." />
                 </div>
                 {contactStatus === 'error' && (
-                  <p style={{ fontSize: '12px', color: TEXT, opacity: 0.6 }}>Something went wrong — please try again.</p>
+                  <p style={{ fontSize: '12px', color: '#fff', opacity: 0.6 }}>Something went wrong — please try again.</p>
                 )}
                 <div>
                   <div
@@ -244,42 +246,19 @@ function App() {
         </div>
       )}
 
-      {/* HEADER */}
-      <header style={{ textAlign: 'center', padding: 'clamp(20px, 4vw, 44px) 40px clamp(16px, 3vw, 36px)', flexShrink: 0 }}>
-        <h1 style={{
-          fontFamily: "'Staatliches', cursive",
-          fontWeight: 400,
-          fontSize: 'clamp(32px, 5vw, 58px)',
-          letterSpacing: '0.06em',
-          color: TEXT,
-          lineHeight: 1,
-        }}>
-          Mikayla Exton
-        </h1>
-        <p style={{
-          fontFamily: "'Staatliches', cursive",
-          fontWeight: 400,
-          fontSize: 'clamp(18px, 2.4vw, 30px)',
-          letterSpacing: '0.06em',
-          color: TEXT,
-          fontStyle: 'italic',
-          marginTop: '2px',
-          lineHeight: 1,
-        }}>
-          Photography
-        </p>
-      </header>
+      {/* CARD */}
+      <div style={{
+        width: 'min(96vw, 680px)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
 
-      {/* PHOTO */}
-      <div style={{ flex: 1, padding: '0 40px', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* PHOTO AREA */}
         <div style={{
-          flex: 1,
           position: 'relative',
+          width: '100%',
+          aspectRatio: '4/3',
           overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 0,
         }}>
           {prev !== null && (
             <div className="slide fade-out">
@@ -293,42 +272,97 @@ function App() {
           </div>
         </div>
 
-        {/* Controls */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '10px 0 0', flexShrink: 0 }}>
+        {/* CONTROLS — between photo and title */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '6px 0',
+        }}>
           <button className="ctrl-btn" onClick={() => manualNav(prev_)} aria-label="Previous">
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
               <polyline points="15 18 9 12 15 6"/>
             </svg>
           </button>
           <button className="ctrl-btn" onClick={() => setPlaying(p => !p)} aria-label={playing ? 'Pause' : 'Play'}>
             {playing
-              ? <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-              : <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              ? <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+              : <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             }
           </button>
           <button className="ctrl-btn" onClick={() => manualNav(next)} aria-label="Next">
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </button>
         </div>
+
+        {/* NAME ROW */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          width: '100%',
+          lineHeight: 1,
+        }}>
+          <span style={{
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            fontWeight: 400,
+            fontSize: 'clamp(30px, 7vw, 64px)',
+            color: NAME_COLOR,
+            lineHeight: 1,
+            textAlign: 'left',
+          }}>
+            MIKAYLA
+          </span>
+          <span style={{
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            fontWeight: 400,
+            fontSize: 'clamp(30px, 7vw, 64px)',
+            color: NAME_COLOR,
+            lineHeight: 1,
+            textAlign: 'right',
+          }}>
+            EXTON
+          </span>
+        </div>
+
+        {/* SUBROW */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          marginTop: '5px',
+        }}>
+          <span style={{
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            fontWeight: 400,
+            fontSize: 'clamp(11px, 1.6vw, 15px)',
+            color: NAME_COLOR,
+            fontStyle: 'oblique',
+            textAlign: 'left',
+            textTransform: 'uppercase',
+          }}>
+            Photography
+          </span>
+          <span style={{
+            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+            fontWeight: 400,
+            fontSize: 'clamp(11px, 1.6vw, 15px)',
+            color: SUBTEXT_COLOR,
+            fontStyle: 'oblique',
+            textAlign: 'right',
+            textTransform: 'uppercase',
+          }}>
+            Say{' '}
+            <button className="contact-link" onClick={() => setShowContact(true)}
+              style={{ textTransform: 'uppercase' }}>
+              hello
+            </button>
+            {' '}if you'd like some photos
+          </span>
+        </div>
+
       </div>
-
-      {/* FOOTER */}
-      <footer style={{
-        flexShrink: 0,
-        textAlign: 'center',
-        padding: 'clamp(12px, 2vw, 20px) 40px clamp(16px, 3vw, 32px)',
-      }}>
-        <p style={{ fontSize: 'clamp(14px, 1.8vw, 20px)', fontFamily: "'Staatliches', cursive", letterSpacing: '0.06em', color: TEXT, fontWeight: 400 }}>
-          Say{' '}
-          <button className="contact-link" onClick={() => setShowContact(true)}>
-            hello
-          </button>
-          {' '}if you'd like some photos
-        </p>
-      </footer>
-
     </div>
   )
 }
