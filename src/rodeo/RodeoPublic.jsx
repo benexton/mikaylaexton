@@ -77,7 +77,7 @@ function FitBounds({ points }) {
     if (!points.length) return;
     const lats = points.map((p) => p[0]), lngs = points.map((p) => p[1]);
     map.fitBounds([[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]],
-      { padding: [40, 40] });
+      { padding: [60, 60], maxZoom: 6 });
   }, [points, map]);
   return null;
 }
@@ -87,7 +87,7 @@ export default function RodeoPublic() {
   const [err, setErr] = useState('');
   const [step, setStep] = useState(0);
   const [intro, setIntro] = useState(true);
-  const [view, setView] = useState('timeline');
+  const [view, setView] = useState('map');
   const [openLeg, setOpenLeg] = useState(null);
 
   useEffect(() => {
