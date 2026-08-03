@@ -70,12 +70,10 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-check { flex-direction: row; align-items: center; gap: 8px; }
 .rodeo-check input { width: auto; }
 
-/* public header: masthead + framed illustration (uncropped) + scoreboard */
+/* public header: masthead + scoreboard */
 .rodeo-header { max-width: 720px; margin: 0 auto; padding: 30px 18px 4px; text-align: center; }
 .rodeo-masthead { margin-bottom: 16px; }
 .rodeo-masthead h1 { font-size: clamp(2.4rem, 8vw, 4rem); color: var(--ink); line-height: .98; }
-.rodeo-hero-frame { margin: 0; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); line-height: 0; }
-.rodeo-hero-frame img { width: 100%; height: auto; display: block; }
 .rodeo-scoreboard { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
 .rodeo-score { background: var(--paper-2); border: 1px solid var(--line); border-bottom: 4px solid var(--line); border-radius: 12px; padding: 8px 18px; min-width: 150px; }
 .rodeo-score-name { display: block; font-weight: 600; font-size: .92rem; }

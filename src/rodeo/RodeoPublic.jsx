@@ -157,10 +157,6 @@ export default function RodeoPublic() {
           <span className="rodeo-kicker">The Rodeo</span>
           <h1>Bosphorus or Bust</h1>
         </div>
-        <figure className="rodeo-hero-frame">
-          <img src="/rodeo-hero.png"
-            alt="Ben, Miki, John and Bruce in front of a mash-up of Istanbul and European landmarks" />
-        </figure>
         <div className="rodeo-scoreboard">
           {['ben', 'miki'].map((tk) => (
             <div key={tk} className="rodeo-score" style={{ borderBottomColor: TEAMS[tk].color }}>
