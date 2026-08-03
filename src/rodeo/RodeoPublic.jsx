@@ -208,7 +208,7 @@ export default function RodeoPublic() {
     : (data.scoreboard.ben > data.scoreboard.miki ? 'ben' : 'miki');
 
   return (
-    <div className="rodeo-public">
+    <div className={`rodeo-public${view === 'map' ? ' map-view' : ''}`}>
       {intro && (
         <div className="rodeo-modal-backdrop">
           <div className={`rodeo-modal ${INTRO[step].hero ? 'hero' : ''}`}>
@@ -244,13 +244,13 @@ export default function RodeoPublic() {
       </header>
 
       <div className="rodeo-toggle">
-        <button className={view === 'timeline' ? 'on' : ''} onClick={() => setView('timeline')}>Timeline</button>
         <button className={view === 'map' ? 'on' : ''} onClick={() => setView('map')}>Map</button>
+        <button className={view === 'timeline' ? 'on' : ''} onClick={() => setView('timeline')}>Timeline</button>
       </div>
 
       {view === 'map' && (
         <div className="rodeo-map">
-          <MapContainer center={[37, 10]} zoom={4} scrollWheelZoom style={{ height: '70vh', width: '100%' }}>
+          <MapContainer center={[37, 10]} zoom={4} scrollWheelZoom style={{ flex: '1 1 auto', minHeight: 0, width: '100%' }}>
             <TileLayer attribution='&copy; OpenStreetMap contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <FitBounds points={allPoints} />
