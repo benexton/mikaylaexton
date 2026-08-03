@@ -82,6 +82,56 @@ function FitBounds({ points }) {
   return null;
 }
 
+// Nudge apart any dots that would render on top of (or overlapping) one another,
+// working in screen pixels at the current zoom so distinct-but-close updates stay
+// legible whether you're zoomed out over the whole trip or in on one city.
+const DOT_GAP = 4; // px left between the edges of two resolved dots
+function declutter(map, zoom, markers) {
+  const pts = markers.map((m) => map.project(m.pt, zoom));
+  for (let iter = 0; iter < 48; iter++) {
+    let moved = false;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        let dx = pts[j].x - pts[i].x, dy = pts[j].y - pts[i].y;
+        let dist = Math.hypot(dx, dy);
+        const minDist = markers[i].radius + markers[j].radius + DOT_GAP;
+        if (dist < minDist) {
+          moved = true;
+          if (dist < 0.01) { dx = 1; dy = 0; dist = 1; }
+          const push = (minDist - dist) / 2, ux = dx / dist, uy = dy / dist;
+          pts[i].x -= ux * push; pts[i].y -= uy * push;
+          pts[j].x += ux * push; pts[j].y += uy * push;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+  return markers.map((m, i) => {
+    const ll = map.unproject(pts[i], zoom);
+    return { ...m, pt: [ll.lat, ll.lng] };
+  });
+}
+
+function Markers({ markers, onSelect }) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(() => map.getZoom());
+  useEffect(() => {
+    const onZoom = () => setZoom(map.getZoom());
+    map.on('zoomend', onZoom);
+    return () => map.off('zoomend', onZoom);
+  }, [map]);
+
+  const placed = useMemo(() => declutter(map, zoom, markers), [map, zoom, markers]);
+
+  return placed.map((m) => (
+    <CircleMarker key={m.key} center={m.pt} radius={m.radius}
+      pathOptions={{ color: '#fff', weight: 2, fillColor: m.color, fillOpacity: 1 }}
+      eventHandlers={{ click: () => onSelect(m.legIndex) }}>
+      <Tooltip>{m.tooltip}</Tooltip>
+    </CircleMarker>
+  ));
+}
+
 export default function RodeoPublic() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
@@ -126,6 +176,30 @@ export default function RodeoPublic() {
     () => [...teamPaths.ben.map((p) => p.pt), ...teamPaths.miki.map((p) => p.pt), ...collectivePoints.map((p) => p.pt)],
     [teamPaths, collectivePoints]
   );
+
+  const markers = useMemo(() => {
+    const out = [];
+    ['ben', 'miki'].forEach((tk) => {
+      teamPaths[tk].forEach((p, i) => {
+        out.push({
+          key: `${tk}-${i}`, pt: p.pt, radius: 7, color: TEAMS[tk].color, legIndex: p.legIndex,
+          tooltip: (
+            <>
+              <b style={{ color: TEAMS[tk].color }}>{TEAMS[tk].name}</b><br />
+              {data.legs[p.legIndex].to_place}{p.u.title ? ` — ${p.u.title}` : ''}
+            </>
+          ),
+        });
+      });
+    });
+    collectivePoints.forEach((p, i) => {
+      out.push({
+        key: `c-${i}`, pt: p.pt, radius: 8, color: COLLECTIVE_COLOR, legIndex: p.legIndex,
+        tooltip: <><b>Together</b><br />{data.legs[p.legIndex].to_place}</>,
+      });
+    });
+    return out;
+  }, [teamPaths, collectivePoints, data]);
 
   if (err) return <div className="rodeo-empty"><p>{err}</p></div>;
   if (!data) return <div className="rodeo-loading">Loading the Rodeo...</div>;
@@ -184,23 +258,7 @@ export default function RodeoPublic() {
               <Polyline key={tk} positions={curved(teamPaths[tk].map((p) => p.pt), tk)}
                 pathOptions={{ color: TEAMS[tk].color, weight: 2.5, dashArray: '2 8', lineCap: 'round' }} />
             ))}
-            {['ben', 'miki'].flatMap((tk) => teamPaths[tk].map((p, i) => (
-              <CircleMarker key={`${tk}-${i}`} center={p.pt} radius={7}
-                pathOptions={{ color: '#fff', weight: 2, fillColor: TEAMS[tk].color, fillOpacity: 1 }}
-                eventHandlers={{ click: () => setOpenLeg(p.legIndex) }}>
-                <Tooltip>
-                  <b style={{ color: TEAMS[tk].color }}>{TEAMS[tk].name}</b><br />
-                  {data.legs[p.legIndex].to_place}{p.u.title ? ` — ${p.u.title}` : ''}
-                </Tooltip>
-              </CircleMarker>
-            )))}
-            {collectivePoints.map((p, i) => (
-              <CircleMarker key={`c-${i}`} center={p.pt} radius={8}
-                pathOptions={{ color: '#fff', weight: 2, fillColor: COLLECTIVE_COLOR, fillOpacity: 1 }}
-                eventHandlers={{ click: () => setOpenLeg(p.legIndex) }}>
-                <Tooltip><b>Together</b><br />{data.legs[p.legIndex].to_place}</Tooltip>
-              </CircleMarker>
-            ))}
+            <Markers markers={markers} onSelect={setOpenLeg} />
           </MapContainer>
           <p className="rodeo-map-note">Tap any dot for the full story. Both teams often land in the same city, so the trails curve apart.</p>
         </div>
