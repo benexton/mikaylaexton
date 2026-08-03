@@ -217,7 +217,7 @@ export default function RodeoPublic() {
             <div className="rodeo-modal-body">
               <span className="rodeo-kicker">The Rodeo: Bosphorus or Bust</span>
               <h2>{INTRO[step].title}</h2>
-              {INTRO[step].body}
+              <div className="rodeo-modal-copy">{INTRO[step].body}</div>
               <button className="rodeo-btn big" onClick={() => (step < INTRO.length - 1 ? setStep(step + 1) : setIntro(false))}>
                 {INTRO[step].button}
               </button>

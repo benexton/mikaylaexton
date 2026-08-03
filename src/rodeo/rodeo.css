@@ -126,6 +126,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-modal.wide { max-width: 820px; }
 .rodeo-modal-hero { display: block; width: 100%; height: auto; }
 .rodeo-modal-body { padding: 24px; }
+.rodeo-modal-copy { min-height: 276px; }
 .rodeo-modal-body h2 { font-size: 1.5rem; }
 .rodeo-modal-body p { font-size: .95rem; }
 .rodeo-x { position: absolute; right: 14px; top: 12px; background: none; border: 0; font-size: 1.6rem; line-height: 1; cursor: pointer; color: var(--ink-soft); }
