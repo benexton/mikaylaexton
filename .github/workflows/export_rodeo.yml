@@ -1,0 +1,27 @@
+name: Publish Rodeo snapshot
+
+# Reads published updates from the RODEO Supabase project with its service role,
+# computes the scoreboard, and upserts one JSON file to Storage. Run on demand.
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 */6 * * *'   # optional refresh while travelling
+
+concurrency:
+  group: export-rodeo
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - name: Publish snapshot
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_RODEO_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.RODEO_SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/export_rodeo.py
