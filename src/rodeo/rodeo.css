@@ -70,13 +70,14 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-check { flex-direction: row; align-items: center; gap: 8px; }
 .rodeo-check input { width: auto; }
 
-/* public header: a score either side of the title, title centered */
-.rodeo-header { max-width: 960px; margin: 0 auto; padding: 20px 18px 4px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; text-align: center; }
-.rodeo-masthead { margin-bottom: 0; }
-.rodeo-masthead h1 { font-size: clamp(2rem, 5vw, 3rem); color: var(--ink); line-height: .98; }
+/* public header: masthead + framed illustration (uncropped) + scoreboard */
+.rodeo-header { max-width: 720px; margin: 0 auto; padding: 30px 18px 4px; text-align: center; }
+.rodeo-masthead { margin-bottom: 16px; }
+.rodeo-masthead h1 { font-size: clamp(2.4rem, 8vw, 4rem); color: var(--ink); line-height: .98; }
+.rodeo-hero-frame { margin: 0; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); line-height: 0; }
+.rodeo-hero-frame img { width: 100%; height: auto; display: block; }
+.rodeo-scoreboard { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
 .rodeo-score { background: var(--paper-2); border: 1px solid var(--line); border-bottom: 4px solid var(--line); border-radius: 12px; padding: 8px 18px; min-width: 150px; }
-.rodeo-score:first-child { justify-self: end; }
-.rodeo-score:last-child { justify-self: start; }
 .rodeo-score-name { display: block; font-weight: 600; font-size: .92rem; }
 .rodeo-score-num { font-family: var(--disp); font-weight: 700; font-size: 2rem; color: var(--ink); }
 
@@ -85,15 +86,9 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-toggle button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 
 /* map */
-.rodeo-map { max-width: 1100px; margin: 0 auto; padding: 0 12px; width: 100%; }
+.rodeo-map { max-width: 1100px; margin: 0 auto; padding: 0 12px; }
 .rodeo-map .leaflet-container { border-radius: 16px; box-shadow: var(--shadow); }
 .rodeo-map-note { text-align: center; color: var(--ink-soft); font-size: .86rem; margin: 10px; }
-
-/* map view: fit header + toggle + map into one screen, no page scroll */
-.rodeo-public.map-view { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-.rodeo-public.map-view .rodeo-header,
-.rodeo-public.map-view .rodeo-toggle { flex: 0 0 auto; }
-.rodeo-public.map-view .rodeo-map { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 
 /* timeline */
 .rodeo-timeline { position: relative; max-width: 1000px; margin: 0 auto 60px; padding: 0 16px; }
@@ -124,7 +119,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-modal-backdrop { position: fixed; inset: 0; background: rgba(20,34,64,.55); display: grid; place-items: center; padding: 18px; z-index: 1000; }
 .rodeo-modal { background: var(--paper-2); border-radius: 18px; max-width: 480px; width: 100%; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); position: relative; }
 .rodeo-modal.wide { max-width: 820px; }
-.rodeo-modal-hero { height: 190px; background-size: cover; background-position: center 30%; }
+.rodeo-modal-hero { display: block; width: 100%; height: auto; }
 .rodeo-modal-body { padding: 24px; }
 .rodeo-modal-body h2 { font-size: 1.5rem; }
 .rodeo-modal-body p { font-size: .95rem; }
@@ -143,7 +138,5 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
   .rodeo-leg-marker { left: 18px; transform: translateX(-50%); }
   .rodeo-leg.together { padding-left: 36px; }
   .rodeo-newleg, .rodeo-grid2, .rodeo-detail-grid.two { grid-template-columns: 1fr; }
-  .rodeo-header { padding-top: 20px; grid-template-columns: 1fr; gap: 12px; }
-  .rodeo-header .rodeo-masthead { order: -1; }
-  .rodeo-score:first-child, .rodeo-score:last-child { justify-self: center; }
+  .rodeo-header { padding-top: 20px; }
 }
