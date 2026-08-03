@@ -152,20 +152,24 @@ export default function RodeoPublic() {
         </div>
       )}
 
-      <header className="rodeo-header" style={{ backgroundImage: 'url(/rodeo-hero.png)' }}>
-        <div className="rodeo-header-veil">
-          <span className="rodeo-kicker light">The Rodeo</span>
+      <header className="rodeo-header">
+        <div className="rodeo-masthead">
+          <span className="rodeo-kicker">The Rodeo</span>
           <h1>Bosphorus or Bust</h1>
-          <div className="rodeo-scoreboard">
-            {['ben', 'miki'].map((tk) => (
-              <div key={tk} className="rodeo-score" style={{ borderColor: TEAMS[tk].color }}>
-                <span className="rodeo-score-name" style={{ color: TEAMS[tk].color }}>
-                  {leader === tk ? '👑 ' : ''}{TEAMS[tk].name}
-                </span>
-                <span className="rodeo-score-num">{data.scoreboard[tk]}</span>
-              </div>
-            ))}
-          </div>
+        </div>
+        <figure className="rodeo-hero-frame">
+          <img src="/rodeo-hero.png"
+            alt="Ben, Miki, John and Bruce in front of a mash-up of Istanbul and European landmarks" />
+        </figure>
+        <div className="rodeo-scoreboard">
+          {['ben', 'miki'].map((tk) => (
+            <div key={tk} className="rodeo-score" style={{ borderBottomColor: TEAMS[tk].color }}>
+              <span className="rodeo-score-name" style={{ color: TEAMS[tk].color }}>
+                {leader === tk ? '👑 ' : ''}{TEAMS[tk].name}
+              </span>
+              <span className="rodeo-score-num">{data.scoreboard[tk]}</span>
+            </div>
+          ))}
         </div>
       </header>
 

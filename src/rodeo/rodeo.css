@@ -70,12 +70,14 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-check { flex-direction: row; align-items: center; gap: 8px; }
 .rodeo-check input { width: auto; }
 
-/* public header + scoreboard */
-.rodeo-header { background-size: cover; background-position: center 30%; }
-.rodeo-header-veil { background: linear-gradient(180deg, rgba(20,34,64,.15), rgba(20,34,64,.72)); padding: 46px 20px 26px; text-align: center; color: #fff; }
-.rodeo-header h1 { font-size: clamp(2.2rem, 7vw, 4rem); color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,.35); }
-.rodeo-scoreboard { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
-.rodeo-score { background: rgba(255,255,255,.94); border-bottom: 4px solid; border-radius: 12px; padding: 8px 18px; min-width: 150px; }
+/* public header: masthead + framed illustration (uncropped) + scoreboard */
+.rodeo-header { max-width: 720px; margin: 0 auto; padding: 30px 18px 4px; text-align: center; }
+.rodeo-masthead { margin-bottom: 16px; }
+.rodeo-masthead h1 { font-size: clamp(2.4rem, 8vw, 4rem); color: var(--ink); line-height: .98; }
+.rodeo-hero-frame { margin: 0; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); line-height: 0; }
+.rodeo-hero-frame img { width: 100%; height: auto; display: block; }
+.rodeo-scoreboard { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+.rodeo-score { background: var(--paper-2); border: 1px solid var(--line); border-bottom: 4px solid var(--line); border-radius: 12px; padding: 8px 18px; min-width: 150px; }
 .rodeo-score-name { display: block; font-weight: 600; font-size: .92rem; }
 .rodeo-score-num { font-family: var(--disp); font-weight: 700; font-size: 2rem; color: var(--ink); }
 
@@ -136,5 +138,5 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
   .rodeo-leg-marker { left: 18px; transform: translateX(-50%); }
   .rodeo-leg.together { padding-left: 36px; }
   .rodeo-newleg, .rodeo-grid2, .rodeo-detail-grid.two { grid-template-columns: 1fr; }
-  .rodeo-header-veil { padding-top: 34px; }
+  .rodeo-header { padding-top: 20px; }
 }
