@@ -19,6 +19,7 @@ const INTRO = [
   },
   {
     title: 'How to watch the carnage',
+    hero: true,
     body: (
       <>
         <p>Dots on the map are us: two dotted trails, one per team, curving apart so you can tell us apart even when we end up in the same spot.</p>
@@ -212,7 +213,7 @@ export default function RodeoPublic() {
       {intro && (
         <div className="rodeo-modal-backdrop">
           <div className={`rodeo-modal ${INTRO[step].hero ? 'hero' : ''}`}>
-            {INTRO[step].hero && <div className="rodeo-modal-hero" style={{ backgroundImage: 'url(/rodeo-hero.png)' }} />}
+            {INTRO[step].hero && <img className="rodeo-modal-hero" src="/rodeo-hero.png" alt="Ben, Miki, John and Bruce in front of Istanbul and European landmarks" />}
             <div className="rodeo-modal-body">
               <span className="rodeo-kicker">The Rodeo: Bosphorus or Bust</span>
               <h2>{INTRO[step].title}</h2>
