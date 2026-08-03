@@ -227,19 +227,21 @@ export default function RodeoPublic() {
       )}
 
       <header className="rodeo-header">
+        <div className="rodeo-score" style={{ borderBottomColor: TEAMS.ben.color }}>
+          <span className="rodeo-score-name" style={{ color: TEAMS.ben.color }}>
+            {leader === 'ben' ? '👑 ' : ''}{TEAMS.ben.name}
+          </span>
+          <span className="rodeo-score-num">{data.scoreboard.ben}</span>
+        </div>
         <div className="rodeo-masthead">
           <span className="rodeo-kicker">The Rodeo</span>
           <h1>Bosphorus or Bust</h1>
         </div>
-        <div className="rodeo-scoreboard">
-          {['ben', 'miki'].map((tk) => (
-            <div key={tk} className="rodeo-score" style={{ borderBottomColor: TEAMS[tk].color }}>
-              <span className="rodeo-score-name" style={{ color: TEAMS[tk].color }}>
-                {leader === tk ? '👑 ' : ''}{TEAMS[tk].name}
-              </span>
-              <span className="rodeo-score-num">{data.scoreboard[tk]}</span>
-            </div>
-          ))}
+        <div className="rodeo-score" style={{ borderBottomColor: TEAMS.miki.color }}>
+          <span className="rodeo-score-name" style={{ color: TEAMS.miki.color }}>
+            {leader === 'miki' ? '👑 ' : ''}{TEAMS.miki.name}
+          </span>
+          <span className="rodeo-score-num">{data.scoreboard.miki}</span>
         </div>
       </header>
 
