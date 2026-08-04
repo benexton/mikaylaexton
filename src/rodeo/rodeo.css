@@ -99,7 +99,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 /* scoreboard breakdown, top of timeline */
 .rodeo-scorecard { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1000px; margin: 0 auto 34px; }
 .rodeo-scorecard-team { background: var(--paper-2); border: 1px solid var(--line); border-top: 4px solid; border-radius: 14px; padding: 14px 18px; box-shadow: var(--shadow); }
-.rodeo-scorecard-team h3 { font-size: 1.05rem; margin-bottom: 8px; }
+.rodeo-scorecard-team h3 { font-family: var(--sans); font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
 .rodeo-scorecard-pts { display: flex; flex-wrap: wrap; gap: 12px; font-size: .88rem; color: var(--ink-soft); }
 .rodeo-scorecard-spend { margin-top: 8px; font-weight: 600; font-size: .95rem; }
 .rodeo-scorecard-shared { grid-column: 1 / -1; text-align: center; font-size: .82rem; color: var(--ink-soft); margin: 0; }
@@ -163,6 +163,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-dots span.on { background: var(--terra); }
 .rodeo-detail-grid.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .rodeo-detail-col { border-top: 4px solid; border-radius: 12px; background: var(--paper); padding: 14px; }
+.rodeo-detail-col h3 { font-family: var(--sans); font-size: 1.05rem; }
 
 /* mobile */
 @media (max-width: 760px) {
