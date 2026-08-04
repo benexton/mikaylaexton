@@ -232,7 +232,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
   .rodeo-leg-marker { left: 18px; transform: translateX(-50%); }
   .rodeo-leg.together { padding-left: 36px; }
   .rodeo-newleg, .rodeo-grid2, .rodeo-detail-grid.two, .rodeo-scorecard { grid-template-columns: 1fr; }
-  .rodeo-header { padding-top: 20px; grid-template-columns: 1fr; gap: 12px; }
-  .rodeo-header .rodeo-masthead { order: -1; }
-  .rodeo-score:first-child, .rodeo-score:last-child { justify-self: center; }
+  .rodeo-header { padding-top: 20px; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rodeo-header .rodeo-masthead { order: -1; grid-column: 1 / -1; }
+  .rodeo-score:first-child, .rodeo-score:last-child { justify-self: stretch; min-width: 0; }
 }
