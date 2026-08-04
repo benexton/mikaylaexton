@@ -152,7 +152,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-leg.together { display: flex; justify-content: center; margin: 30px 0; position: relative; }
 .rodeo-merge-card { background: linear-gradient(180deg, #fff8e8, var(--paper-2)); border: 1px solid #ecdcb4; border-radius: 16px; padding: 20px; max-width: 640px; width: 100%; box-shadow: var(--shadow); cursor: pointer; text-align: center; }
 .rodeo-leg-tag { font-family: var(--disp); font-size: .78rem; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: .08em; }
-.rodeo-nopoints { display: inline-block; margin-top: 8px; font-size: .82rem; color: var(--ink-soft); }
+.rodeo-nopoints { display: block; margin-top: 8px; font-size: .82rem; color: var(--ink-soft); }
 
 /* single thumbnail, used on timeline/merge cards */
 .rodeo-thumb { position: relative; margin-top: 10px; display: inline-block; }
