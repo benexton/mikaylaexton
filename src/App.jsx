@@ -208,7 +208,7 @@ function App() {
 
             {contactStatus === 'success' ? (
               <p style={{ fontSize: '16px', fontWeight: 300, lineHeight: 1.7, color: '#fff', opacity: 0.8 }}>
-                Thank you — Mikayla will be in touch shortly.
+                Thank you - Mikayla will be in touch shortly.
               </p>
             ) : (
               <form onSubmit={handleContact} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -227,7 +227,7 @@ function App() {
                   <textarea name="message" rows={4} required placeholder="Tell me about your project..." />
                 </div>
                 {contactStatus === 'error' && (
-                  <p style={{ fontSize: '12px', color: '#fff', opacity: 0.6 }}>Something went wrong — please try again.</p>
+                  <p style={{ fontSize: '12px', color: '#fff', opacity: 0.6 }}>Something went wrong - please try again.</p>
                 )}
                 <div>
                   <div
@@ -272,7 +272,7 @@ function App() {
           </div>
         </div>
 
-        {/* CONTROLS — between photo and title */}
+        {/* CONTROLS - between photo and title */}
         <div style={{
           display: 'flex',
           justifyContent: 'center',

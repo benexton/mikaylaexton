@@ -59,6 +59,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .rodeo-inline { display: flex; gap: 8px; }
 .rodeo-cur { max-width: 70px; text-transform: uppercase; }
+.rodeo-fx-preview { font-size: .82rem; color: var(--ink-soft); margin: 5px 0 0; }
 .rodeo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .rodeo-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 3px 6px 3px 11px; font-size: .85rem; display: inline-flex; align-items: center; gap: 4px; }
 .rodeo-chip button { border: 0; background: none; cursor: pointer; color: var(--ink-soft); font-size: 1.05rem; line-height: 1; }
@@ -115,10 +116,29 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-merge-card { background: linear-gradient(180deg, #fff8e8, var(--paper-2)); border: 1px solid #ecdcb4; border-radius: 16px; padding: 20px; max-width: 640px; width: 100%; box-shadow: var(--shadow); cursor: pointer; text-align: center; }
 .rodeo-leg-tag { font-family: var(--disp); font-size: .78rem; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: .08em; }
 .rodeo-nopoints { display: inline-block; margin-top: 8px; font-size: .82rem; color: var(--ink-soft); }
-.rodeo-photostrip { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; }
-.rodeo-photostrip figure { margin: 0; flex: 0 0 auto; }
-.rodeo-photostrip img { height: 120px; border-radius: 8px; display: block; }
-.rodeo-photostrip figcaption { font-size: .76rem; color: var(--ink-soft); margin-top: 2px; max-width: 180px; }
+
+/* single thumbnail, used on timeline/merge cards */
+.rodeo-thumb { position: relative; margin-top: 10px; display: inline-block; }
+.rodeo-thumb img { height: 120px; border-radius: 8px; display: block; }
+.rodeo-thumb-count { position: absolute; right: 6px; bottom: 6px; background: rgba(20,34,64,.72); color: #fff; font-size: .74rem; font-weight: 600; padding: 1px 7px; border-radius: 20px; }
+
+/* map tooltip thumbnail */
+.rodeo-tooltip-thumb { display: block; width: 100%; max-width: 160px; height: 90px; object-fit: cover; border-radius: 6px; margin-bottom: 6px; }
+
+/* full gallery carousel, used in the leg detail modal */
+.rodeo-carousel { margin-top: 10px; }
+.rodeo-carousel-frame { position: relative; border-radius: 10px; overflow: hidden; background: #000; }
+.rodeo-carousel-frame img { width: 100%; max-height: 360px; object-fit: contain; display: block; background: #000; }
+.rodeo-carousel-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(20,34,64,.55); color: #fff; border: 0; width: 34px; height: 34px; border-radius: 50%; font-size: 1.3rem; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.rodeo-carousel-nav:hover { background: rgba(20,34,64,.8); }
+.rodeo-carousel-nav.prev { left: 8px; }
+.rodeo-carousel-nav.next { right: 8px; }
+.rodeo-carousel-count { position: absolute; right: 8px; bottom: 8px; background: rgba(20,34,64,.72); color: #fff; font-size: .74rem; font-weight: 600; padding: 1px 8px; border-radius: 20px; }
+.rodeo-carousel-caption { font-size: .8rem; color: var(--ink-soft); margin: 6px 0 0; }
+.rodeo-carousel-thumbs { display: flex; gap: 6px; overflow-x: auto; margin-top: 8px; }
+.rodeo-carousel-thumb { flex: 0 0 auto; padding: 0; border: 2px solid transparent; border-radius: 6px; background: none; cursor: pointer; line-height: 0; opacity: .6; }
+.rodeo-carousel-thumb.on { border-color: var(--sky); opacity: 1; }
+.rodeo-carousel-thumb img { width: 52px; height: 40px; object-fit: cover; border-radius: 4px; display: block; }
 
 /* intro + detail modal */
 .rodeo-modal-backdrop { position: fixed; inset: 0; background: rgba(20,34,64,.55); display: grid; place-items: center; padding: 18px; z-index: 1000; }

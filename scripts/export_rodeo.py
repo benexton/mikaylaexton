@@ -4,7 +4,7 @@ Publish the public snapshot for The Rodeo (Casablanca to Constantinople).
 
 Reads PUBLISHED updates + legs with the service role, computes the scoreboard,
 and writes a single JSON file to the public Storage bucket. The public viewer
-(/the-rodeo) fetches that file directly — no rebuild required to refresh data,
+(/the-rodeo) fetches that file directly - no rebuild required to refresh data,
 exactly like VERT's export_public.py.
 
 Scoring (race legs only; 'together' legs score nothing):
@@ -12,7 +12,10 @@ Scoring (race legs only; 'together' legs score nothing):
   * fastest pair that leg            -> +1
   * every country a pair crossed     -> +1 each (per team, own route)
 Money/time points are only awarded when BOTH teams have a published update for
-that leg (you can't win a race the other pair hasn't reported yet).
+that leg (you can't win a race the other pair hasn't reported yet). Money is
+compared using money_nzd_minor (spend converted to NZD at filing time), never
+the raw money_minor, since the two teams routinely file in different
+currencies and comparing those directly would be meaningless.
 
 Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
 """
@@ -43,8 +46,8 @@ def get(path, params):
     return r.json()
 
 
-def money(u):
-    return u.get("money_minor")
+def money_nzd(u):
+    return u.get("money_nzd_minor")
 
 
 def minutes(u):
@@ -70,7 +73,7 @@ def score(legs, updates_by_leg):
 
         # money + time points need both teams reporting
         if "ben" in ups and "miki" in ups:
-            mb, mm = money(ups["ben"]), money(ups["miki"])
+            mb, mm = money_nzd(ups["ben"]), money_nzd(ups["miki"])
             if mb is not None and mm is not None and mb != mm:
                 pts["ben" if mb < mm else "miki"] += 1
             tb, tm = minutes(ups["ben"]), minutes(ups["miki"])
@@ -92,7 +95,7 @@ def main():
     legs = get("rodeo_legs", {"select": "id,leg_no,scope,from_place,to_place,envelope_opened_at",
                               "order": "leg_no.asc"})
     updates = get("rodeo_updates", {
-        "select": "id,leg_id,team,title,body,money_minor,currency,duration_minutes,"
+        "select": "id,leg_id,team,title,body,money_minor,currency,money_nzd_minor,duration_minutes,"
                   "countries,lat,lng,arrived_at,photos,submitted_by",
         "published": "eq.true",
     })
@@ -120,6 +123,7 @@ def main():
                     "body": u.get("body"),
                     "money_minor": u.get("money_minor"),
                     "currency": u.get("currency"),
+                    "money_nzd_minor": u.get("money_nzd_minor"),
                     "duration_minutes": u.get("duration_minutes"),
                     "countries": u.get("countries") or [],
                     "lat": u.get("lat"), "lng": u.get("lng"),

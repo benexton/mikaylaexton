@@ -33,7 +33,9 @@ const INTRO = [
 
 function money(u) {
   if (u?.money_minor == null) return null;
-  return `${(u.money_minor / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })} ${u.currency || ''}`.trim();
+  const amt = `${(u.money_minor / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })} ${u.currency || ''}`.trim();
+  if (u.money_nzd_minor == null || (u.currency || '').toUpperCase() === 'NZD') return amt;
+  return `${amt} (≈ NZD $${(u.money_nzd_minor / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })})`;
 }
 function legTime(u) {
   if (u?.duration_minutes == null) return null;
@@ -186,8 +188,9 @@ export default function RodeoPublic() {
           key: `${tk}-${i}`, pt: p.pt, radius: 7, color: TEAMS[tk].color, legIndex: p.legIndex,
           tooltip: (
             <>
+              {p.u.photos?.[0] && <img className="rodeo-tooltip-thumb" src={p.u.photos[0].url} alt="" />}
               <b style={{ color: TEAMS[tk].color }}>{TEAMS[tk].name}</b><br />
-              {data.legs[p.legIndex].to_place}{p.u.title ? ` — ${p.u.title}` : ''}
+              {data.legs[p.legIndex].to_place}{p.u.title ? ` - ${p.u.title}` : ''}
             </>
           ),
         });
@@ -196,7 +199,12 @@ export default function RodeoPublic() {
     collectivePoints.forEach((p, i) => {
       out.push({
         key: `c-${i}`, pt: p.pt, radius: 8, color: COLLECTIVE_COLOR, legIndex: p.legIndex,
-        tooltip: <><b>Together</b><br />{data.legs[p.legIndex].to_place}</>,
+        tooltip: (
+          <>
+            {p.u.photos?.[0] && <img className="rodeo-tooltip-thumb" src={p.u.photos[0].url} alt="" />}
+            <b>Together</b><br />{data.legs[p.legIndex].to_place}
+          </>
+        ),
       });
     });
     return out;
@@ -279,7 +287,7 @@ export default function RodeoPublic() {
                     <span className="rodeo-leg-tag">Leg {leg.leg_no} · together</span>
                     <h3>{leg.to_place}{u?.title ? `: ${u.title}` : ''}</h3>
                     {u?.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(u.body)} />}
-                    <PhotoStrip photos={u?.photos} />
+                    <PhotoThumb photos={u?.photos} />
                     <span className="rodeo-nopoints">reunion leg · no points</span>
                   </div>
                 </div>
@@ -306,7 +314,7 @@ export default function RodeoPublic() {
                             {u.countries?.length > 0 && <span>🌍 {u.countries.length}</span>}
                           </div>
                           {u.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(u.body)} />}
-                          <PhotoStrip photos={u.photos} />
+                          <PhotoThumb photos={u.photos} />
                         </>
                       )}
                     </div>
@@ -319,19 +327,54 @@ export default function RodeoPublic() {
       )}
 
       {openLeg != null && (
-        <LegDetail leg={data.legs[openLeg]} onClose={() => setOpenLeg(null)} />
+        <LegDetail key={openLeg} leg={data.legs[openLeg]} onClose={() => setOpenLeg(null)} />
       )}
     </div>
   );
 }
 
-function PhotoStrip({ photos }) {
+// Single representative photo, used anywhere space is tight (timeline cards,
+// merge cards). A badge shows how many more are in the full gallery.
+function PhotoThumb({ photos }) {
   if (!photos?.length) return null;
   return (
-    <div className="rodeo-photostrip">
-      {photos.map((p, i) => (
-        <figure key={i}><img src={p.url} alt={p.caption || ''} loading="lazy" />{p.caption && <figcaption>{p.caption}</figcaption>}</figure>
-      ))}
+    <div className="rodeo-thumb">
+      <img src={photos[0].url} alt={photos[0].caption || ''} loading="lazy" />
+      {photos.length > 1 && <span className="rodeo-thumb-count">+{photos.length - 1}</span>}
+    </div>
+  );
+}
+
+// Full gallery for the leg detail modal: one photo at a time, with prev/next
+// arrows and a thumbnail strip to jump directly to any photo.
+function PhotoCarousel({ photos }) {
+  const [idx, setIdx] = useState(0);
+  if (!photos?.length) return null;
+  const i = Math.min(idx, photos.length - 1);
+  const photo = photos[i];
+  const go = (d) => setIdx((idx + d + photos.length) % photos.length);
+  return (
+    <div className="rodeo-carousel">
+      <div className="rodeo-carousel-frame">
+        {photos.length > 1 && (
+          <button type="button" className="rodeo-carousel-nav prev" onClick={() => go(-1)} aria-label="Previous photo">‹</button>
+        )}
+        <img src={photo.url} alt={photo.caption || ''} />
+        {photos.length > 1 && (
+          <button type="button" className="rodeo-carousel-nav next" onClick={() => go(1)} aria-label="Next photo">›</button>
+        )}
+        {photos.length > 1 && <span className="rodeo-carousel-count">{i + 1} / {photos.length}</span>}
+      </div>
+      {photo.caption && <p className="rodeo-carousel-caption">{photo.caption}</p>}
+      {photos.length > 1 && (
+        <div className="rodeo-carousel-thumbs">
+          {photos.map((p, pi) => (
+            <button key={pi} type="button" className={`rodeo-carousel-thumb${pi === i ? ' on' : ''}`} onClick={() => setIdx(pi)}>
+              <img src={p.url} alt="" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -357,7 +400,7 @@ function LegDetail({ leg, onClose }) {
                     {u.countries?.length > 0 && <span>🌍 {u.countries.join(', ')}</span>}
                   </div>
                   {u.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(u.body)} />}
-                  <PhotoStrip photos={u.photos} />
+                  <PhotoCarousel photos={u.photos} />
                 </div>
               );
             })}

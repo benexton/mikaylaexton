@@ -1,5 +1,5 @@
 -- =============================================================================
--- The Rodeo: Casablanca to Constantinople — Supabase schema
+-- The Rodeo: Casablanca to Constantinople - Supabase schema
 -- Mirrors the VERT (seismicshift) conventions: enums, updated_at trigger, RLS.
 -- Run in the Supabase SQL editor on the same project (or a fresh one).
 -- =============================================================================
@@ -56,6 +56,7 @@ create table if not exists public.rodeo_updates (
 
   money_minor       int,                             -- spend for this leg, in cents
   currency          text default 'USD',
+  money_nzd_minor   int,                             -- money_minor converted to NZD cents at filing time
   duration_minutes  int,                             -- leg time, whole minutes
   countries         text[] default '{}',             -- countries this pair crossed this leg
 
@@ -133,3 +134,8 @@ drop policy if exists "rodeo media read" on storage.objects;
 create policy "rodeo media read" on storage.objects
   for select to public
   using (bucket_id = 'rodeo-media');
+
+-- 7. NZD conversion (idempotent add, for databases created before this column) -
+alter table public.rodeo_updates add column if not exists money_nzd_minor int;
+comment on column public.rodeo_updates.money_nzd_minor is
+  'money_minor converted to NZD cents at filing time via a live FX rate, so cross-currency legs score fairly';

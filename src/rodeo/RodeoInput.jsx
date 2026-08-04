@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { rodeo, uploadRodeoPhoto, TEAMS } from './rodeoSupabase.js';
+import { nzdRate, toNzdMinor } from './currency.js';
 
 const LEG_SELECT = 'id,leg_no,scope,from_place,to_place,envelope_opened_at';
 const UPD_SELECT =
-  'id,leg_id,team,title,body,money_minor,currency,duration_minutes,countries,lat,lng,arrived_at,photos,published';
+  'id,leg_id,team,title,body,money_minor,currency,money_nzd_minor,duration_minutes,countries,lat,lng,arrived_at,photos,published';
 
 function blankUpdate() {
   return {
@@ -20,6 +21,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
   const [countryDraft, setCountryDraft] = useState('');
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
+  const [fxPreview, setFxPreview] = useState('');
 
   // New-leg fields
   const [newLeg, setNewLeg] = useState({ from_place: '', to_place: '', scope: 'race' });
@@ -81,6 +83,22 @@ export default function RodeoInput({ team, teamName, signOut }) {
     setStatus(`Leg ${data.leg_no} opened.`);
   }
 
+  // Live "≈ NZD $X" preview as the amount/currency are typed, debounced so we
+  // don't hit the FX API on every keystroke.
+  useEffect(() => {
+    if (form.dollars === '' || Number.isNaN(+form.dollars) || !form.currency) { setFxPreview(''); return; }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const rate = await nzdRate(form.currency);
+        if (!cancelled) {
+          setFxPreview(rate === 1 ? '' : (+form.dollars * rate).toLocaleString(undefined, { maximumFractionDigits: 2 }));
+        }
+      } catch { if (!cancelled) setFxPreview(''); }
+    }, 500);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [form.dollars, form.currency]);
+
   function addCountry() {
     const c = countryDraft.trim();
     if (!c || form.countries.includes(c)) { setCountryDraft(''); return; }
@@ -113,15 +131,24 @@ export default function RodeoInput({ team, teamName, signOut }) {
 
   async function save() {
     if (!leg) return;
-    setBusy(true); setStatus('');
+    setBusy(true); setStatus('Saving...');
     const mins = (parseInt(form.hours || '0', 10) * 60) + parseInt(form.minutes || '0', 10);
+    const currency = (form.currency || 'USD').trim().toUpperCase();
+
+    let moneyNzdMinor = null, fxWarning = '';
+    if (form.dollars !== '') {
+      try { moneyNzdMinor = await toNzdMinor(form.dollars, currency); }
+      catch { fxWarning = ' (could not fetch an exchange rate, so this leg has no NZD figure yet)'; }
+    }
+
     const row = {
       leg_id: leg.id,
       team: targetTeam,
       title: form.title || null,
       body: form.body || null,
       money_minor: form.dollars === '' ? null : Math.round(parseFloat(form.dollars) * 100),
-      currency: form.currency || 'USD',
+      currency,
+      money_nzd_minor: moneyNzdMinor,
       duration_minutes: mins || null,
       countries: form.countries,
       lat: form.lat === '' ? null : parseFloat(form.lat),
@@ -135,7 +162,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
     else ({ error } = await rodeo.from('rodeo_updates').insert(row));
     setBusy(false);
     if (error) { setStatus(error.message); return; }
-    setStatus('Saved. Run the "Publish Rodeo snapshot" Action to push it live.');
+    setStatus(`Saved. Run the "Publish Rodeo snapshot" Action to push it live.${fxWarning}`);
     await loadAll();
   }
 
@@ -199,8 +226,9 @@ export default function RodeoInput({ team, teamName, signOut }) {
                   <input type="number" step="0.01" value={form.dollars}
                     onChange={(e) => setForm({ ...form, dollars: e.target.value })} placeholder="0.00" />
                   <input className="rodeo-cur" value={form.currency}
-                    onChange={(e) => setForm({ ...form, currency: e.target.value })} />
+                    onChange={(e) => setForm({ ...form, currency: e.target.value })} placeholder="USD" />
                 </div>
+                {fxPreview && <p className="rodeo-fx-preview">≈ NZD ${fxPreview}</p>}
               </div>
               <div>
                 <label>Leg time</label>
