@@ -407,7 +407,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
             <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="e.g. We missed the ferry" />
 
-            <label>The story (markdown ok)</label>
+            <label>The story</label>
             <textarea rows={5} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })}
               placeholder="What happened out there..." />
 
@@ -499,7 +499,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
         <section className="rodeo-panel">
           <h2>Waypoints</h2>
           <p className="rodeo-muted">
-            Extra dots dropped along this leg &mdash; a few photos and a line or two, no stats. Drop as many as you like.
+            Extra dots dropped along this leg - a few photos and a line or two, no stats. Drop as many as you like.
           </p>
 
           {legWaypoints.length > 0 && (
@@ -510,7 +510,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
                   <div className="rodeo-waypoint-row-body">
                     <b>{w.title || '(untitled waypoint)'}</b>
                     {(w.place_city || w.place_country) && (
-                      <span className="rodeo-muted"> &mdash; {[w.place_city, w.place_country].filter(Boolean).join(', ')}</span>
+                      <span className="rodeo-muted"> - {[w.place_city, w.place_country].filter(Boolean).join(', ')}</span>
                     )}
                   </div>
                   <button type="button" className="rodeo-btn ghost small" onClick={() => editWaypoint(w)}>Edit</button>
@@ -528,7 +528,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
               <input value={wpForm.title} onChange={(e) => setWpForm({ ...wpForm, title: e.target.value })}
                 placeholder="e.g. Roadside coffee in the Atlas" />
 
-              <label>The story (markdown ok)</label>
+              <label>The story</label>
               <textarea rows={3} value={wpForm.body} onChange={(e) => setWpForm({ ...wpForm, body: e.target.value })} />
 
               <label>Where this pin drops on the map</label>
