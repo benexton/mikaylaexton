@@ -44,6 +44,39 @@ function legTime(u) {
 }
 function html(md) { return { __html: marked.parse(md || '') }; }
 
+function fmtNzd(minor) {
+  return `$${((minor ?? 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
+
+// Points-by-category and running spend, shown above the timeline.
+function ScoreboardBreakdown({ data }) {
+  const breakdown = data.scoreboard_breakdown;
+  const spend = data.spend_nzd_minor;
+  const shared = data.shared_spend_nzd_minor;
+  if (!breakdown && !spend) return null;
+  return (
+    <div className="rodeo-scorecard">
+      {['ben', 'miki'].map((tk) => {
+        const b = breakdown?.[tk];
+        return (
+          <div key={tk} className="rodeo-scorecard-team" style={{ borderColor: TEAMS[tk].color }}>
+            <h3 style={{ color: TEAMS[tk].color }}>{TEAMS[tk].name}</h3>
+            <div className="rodeo-scorecard-pts">
+              <span>💸 {b?.money ?? 0} cheapest</span>
+              <span>⏱ {b?.time ?? 0} fastest</span>
+              <span>🌍 {b?.countries ?? 0} countries</span>
+            </div>
+            <div className="rodeo-scorecard-spend">Spent so far: {fmtNzd(spend?.[tk])} NZD</div>
+          </div>
+        );
+      })}
+      {shared > 0 && (
+        <p className="rodeo-scorecard-shared">+ {fmtNzd(shared)} NZD spent together, not attributed to either team</p>
+      )}
+    </div>
+  );
+}
+
 // ---- map geometry -----------------------------------------------------------
 const OFFSET = 0.22;        // degrees each team is nudged so co-located dots split
 const BOW = 0.16;           // curve bow as a fraction of segment length
@@ -277,6 +310,7 @@ export default function RodeoPublic() {
 
       {view === 'timeline' && (
         <div className="rodeo-timeline">
+          <ScoreboardBreakdown data={data} />
           <div className="rodeo-spine" />
           {data.legs.map((leg, li) => {
             if (leg.scope === 'together') {

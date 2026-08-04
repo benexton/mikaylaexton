@@ -55,36 +55,57 @@ def minutes(u):
 
 
 def score(legs, updates_by_leg):
-    """Return (per_leg_points, totals) where per_leg_points[leg_id][team] = int."""
+    """Return (per_leg_points, totals, breakdown, spend_nzd, shared_spend_nzd).
+
+    breakdown[team] = {"money": n, "time": n, "countries": n} point counts by
+    category. spend_nzd[team] is that team's own race-leg spend, in NZD cents;
+    shared_spend_nzd is spend on 'together' legs, which isn't attributable to
+    either team.
+    """
     per_leg, totals = {}, {t: 0 for t in TEAMS}
+    breakdown = {t: {"money": 0, "time": 0, "countries": 0} for t in TEAMS}
+    spend_nzd = {t: 0 for t in TEAMS}
+    shared_spend_nzd = 0
 
     for leg in legs:
         lid = leg["id"]
         pts = {t: 0 for t in TEAMS}
+        ups = {u["team"]: u for u in updates_by_leg.get(lid, []) if u.get("team")}
+
+        for t, u in ups.items():
+            spend_nzd[t] += u.get("money_nzd_minor") or 0
+
         if leg.get("scope") != "race":
+            for u in updates_by_leg.get(lid, []):
+                if not u.get("team"):
+                    shared_spend_nzd += u.get("money_nzd_minor") or 0
             per_leg[lid] = pts            # together legs: everyone stays on 0
             continue
 
-        ups = {u["team"]: u for u in updates_by_leg.get(lid, []) if u.get("team")}
-
         # country points: per team, always counted from their own route
         for t, u in ups.items():
-            pts[t] += len(u.get("countries") or [])
+            c = len(u.get("countries") or [])
+            pts[t] += c
+            breakdown[t]["countries"] += c
 
         # money + time points need both teams reporting
         if "ben" in ups and "miki" in ups:
             mb, mm = money_nzd(ups["ben"]), money_nzd(ups["miki"])
             if mb is not None and mm is not None and mb != mm:
-                pts["ben" if mb < mm else "miki"] += 1
+                winner = "ben" if mb < mm else "miki"
+                pts[winner] += 1
+                breakdown[winner]["money"] += 1
             tb, tm = minutes(ups["ben"]), minutes(ups["miki"])
             if tb is not None and tm is not None and tb != tm:
-                pts["ben" if tb < tm else "miki"] += 1
+                winner = "ben" if tb < tm else "miki"
+                pts[winner] += 1
+                breakdown[winner]["time"] += 1
 
         per_leg[lid] = pts
         for t in TEAMS:
             totals[t] += pts[t]
 
-    return per_leg, totals
+    return per_leg, totals, breakdown, spend_nzd, shared_spend_nzd
 
 
 def main():
@@ -104,7 +125,7 @@ def main():
     for u in updates:
         updates_by_leg.setdefault(u["leg_id"], []).append(u)
 
-    per_leg, totals = score(legs, updates_by_leg)
+    per_leg, totals, breakdown, spend_nzd, shared_spend_nzd = score(legs, updates_by_leg)
 
     out_legs = []
     for leg in legs:
@@ -140,6 +161,9 @@ def main():
         "title": "The Rodeo: Casablanca to Constantinople",
         "teams": TEAMS,
         "scoreboard": totals,
+        "scoreboard_breakdown": breakdown,
+        "spend_nzd_minor": spend_nzd,
+        "shared_spend_nzd_minor": shared_spend_nzd,
         "legs": out_legs,
     }).encode("utf-8")
 
