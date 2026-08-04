@@ -48,3 +48,9 @@ export async function uploadRodeoPhoto(file, prefix = '') {
 // Public snapshot URL (written by the export_rodeo Action).
 export const RODEO_SNAPSHOT_URL =
   `${url ?? ''}/storage/v1/object/public/rodeo-media/public/the-rodeo-public.json`;
+
+// Public comment intake: verifies Turnstile server-side, then writes with the
+// service role - see supabase/functions/rodeo-comment. The site key is safe
+// to ship to the browser (only the secret, held by the edge function, isn't).
+export const RODEO_COMMENT_FN_URL = `${url ?? ''}/functions/v1/rodeo-comment`;
+export const RODEO_TURNSTILE_SITE_KEY = import.meta.env.VITE_RODEO_TURNSTILE_SITE_KEY ?? '';

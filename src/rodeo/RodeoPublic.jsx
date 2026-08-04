@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { marked } from 'marked';
-import { RODEO_SNAPSHOT_URL, TEAMS, COLLECTIVE_COLOR } from './rodeoSupabase.js';
+import { rodeo, RODEO_SNAPSHOT_URL, RODEO_COMMENT_FN_URL, RODEO_TURNSTILE_SITE_KEY, TEAMS, COLLECTIVE_COLOR } from './rodeoSupabase.js';
 
 const INTRO = [
   {
@@ -15,7 +15,16 @@ const INTRO = [
         <p>Then we reunite, compare disasters, and open the next envelope. Casablanca to Constantinople, six different legs, three weeks, and one Bosphorus at the end.</p>
       </>
     ),
-    button: 'Tell me how to read this',
+    // Shorter, screen-fitting version for phones - the desktop copy above
+    // reads fine with room to spare, but is a lot of scrolling on mobile.
+    mobileBody: (
+      <>
+        <p>Sealed envelopes control our life across a continent for the next 3 weeks.</p>
+        <p>Each stop we open one, learn the destination, and split into two teams: Ben &amp; John vs Miki &amp; Bruce. Cheapest pair, fastest pair, and every country crossed each win a point.</p>
+        <p>Then we reunite and open the next envelope. Casablanca to Constantinople, six legs, one Bosphorus at the end.</p>
+      </>
+    ),
+    button: 'Next',
   },
   {
     title: 'How to watch the carnage',
@@ -27,9 +36,32 @@ const INTRO = [
         <p>Hover a dot for the gist, tap it for the full story. The scoreboard keeps the peace.</p>
       </>
     ),
-    button: 'Watch the Rodeo',
+    // "Hover" doesn't mean anything on a touchscreen, so the mobile copy
+    // drops it rather than just trimming words.
+    mobileBody: (
+      <>
+        <p>Dots on the map are us - one trail per team, curving apart so you can tell who's who.</p>
+        <p>The timeline runs Ben &amp; John on the left, Miki &amp; Bruce on the right. Where the lanes merge into one card, that's a leg we travelled together - no points, just snacks.</p>
+        <p>Tap a dot for the full story.</p>
+      </>
+    ),
+    button: "Let's go!",
   },
 ];
+
+// Mirrors rodeo.css's 760px mobile breakpoint, for the handful of things
+// (like which intro copy to show) that need to branch in JS, not just CSS.
+function useIsMobile() {
+  const query = '(max-width: 760px)';
+  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = () => setMobile(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return mobile;
+}
 
 function money(u) {
   if (u?.money_minor == null) return null;
@@ -118,6 +150,19 @@ function FitBounds({ points }) {
   return null;
 }
 
+// Belt-and-braces alongside the modal's own scroll fix: while a modal (intro
+// or leg detail) is open, the map underneath can't be dragged/zoomed even if
+// a touch somehow lands on it, so a scroll gesture on the card never bleeds
+// through to pan the map behind it.
+function MapLock({ active }) {
+  const map = useMap();
+  useEffect(() => {
+    const controls = [map.dragging, map.touchZoom, map.scrollWheelZoom, map.doubleClickZoom];
+    controls.forEach((c) => (active ? c.disable() : c.enable()));
+  }, [active, map]);
+  return null;
+}
+
 // Nudge apart any dots that would render on top of (or overlapping) one another,
 // working in screen pixels at the current zoom so distinct-but-close updates stay
 // legible whether you're zoomed out over the whole trip or in on one city.
@@ -175,6 +220,7 @@ export default function RodeoPublic() {
   const [intro, setIntro] = useState(true);
   const [view, setView] = useState('map');
   const [openLeg, setOpenLeg] = useState(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetch(RODEO_SNAPSHOT_URL)
@@ -183,7 +229,18 @@ export default function RodeoPublic() {
       .catch(() => setErr('The snapshot has not been published yet. Run the "Publish Rodeo snapshot" Action.'));
   }, []);
 
-  // point per team per leg (collective legs contribute a shared point to both)
+  // Flatten a leg update into its orderable dots: waypoints (as dropped)
+  // first, the leg summary itself last (it's written once, at the end).
+  function updatePoints(u) {
+    const pts = (u.waypoints || [])
+      .filter((w) => w.lat != null && w.lng != null)
+      .map((w) => ({ ...w, isWaypoint: true }));
+    if (u.lat != null && u.lng != null) pts.push({ ...u, isWaypoint: false });
+    return pts;
+  }
+
+  // point per team per leg (collective legs contribute a shared point to both);
+  // a leg can now contribute several points per team, one per waypoint plus the summary.
   const teamPaths = useMemo(() => {
     const paths = { ben: [], miki: [] };
     if (!data) return paths;
@@ -191,7 +248,10 @@ export default function RodeoPublic() {
       const collective = leg.updates.find((u) => u.team == null);
       ['ben', 'miki'].forEach((tk) => {
         const u = leg.scope === 'together' ? collective : leg.updates.find((x) => x.team === tk);
-        if (u && u.lat != null && u.lng != null) paths[tk].push({ pt: offsetPoint(u.lat, u.lng, tk), legIndex: li, team: tk, u });
+        if (!u) return;
+        updatePoints(u).forEach((point) => {
+          paths[tk].push({ pt: offsetPoint(point.lat, point.lng, tk), legIndex: li, team: tk, u, point });
+        });
       });
     });
     return paths;
@@ -203,7 +263,8 @@ export default function RodeoPublic() {
     data.legs.forEach((leg, li) => {
       if (leg.scope !== 'together') return;
       const u = leg.updates.find((x) => x.team == null);
-      if (u && u.lat != null && u.lng != null) out.push({ pt: [u.lat, u.lng], legIndex: li, u });
+      if (!u) return;
+      updatePoints(u).forEach((point) => out.push({ pt: [point.lat, point.lng], legIndex: li, u, point }));
     });
     return out;
   }, [data]);
@@ -217,25 +278,31 @@ export default function RodeoPublic() {
     const out = [];
     ['ben', 'miki'].forEach((tk) => {
       teamPaths[tk].forEach((p, i) => {
+        const place = [p.point.place_city, p.point.place_country].filter(Boolean).join(', ');
+        const label = p.point.isWaypoint
+          ? (p.point.title || place)
+          : `${data.legs[p.legIndex].to_place}${p.point.title ? ` - ${p.point.title}` : ''}`;
         out.push({
-          key: `${tk}-${i}`, pt: p.pt, radius: 7, color: TEAMS[tk].color, legIndex: p.legIndex,
+          key: `${tk}-${i}`, pt: p.pt, radius: p.point.isWaypoint ? 5 : 7, color: TEAMS[tk].color, legIndex: p.legIndex,
           tooltip: (
             <>
-              {p.u.photos?.[0] && <img className="rodeo-tooltip-thumb" src={p.u.photos[0].url} alt="" />}
+              {p.point.photos?.[0] && <img className="rodeo-tooltip-thumb" src={p.point.photos[0].url} alt="" />}
               <b style={{ color: TEAMS[tk].color }}>{TEAMS[tk].name}</b><br />
-              {data.legs[p.legIndex].to_place}{p.u.title ? ` - ${p.u.title}` : ''}
+              {label}
             </>
           ),
         });
       });
     });
     collectivePoints.forEach((p, i) => {
+      const place = [p.point.place_city, p.point.place_country].filter(Boolean).join(', ');
+      const label = p.point.isWaypoint ? (p.point.title || place) : data.legs[p.legIndex].to_place;
       out.push({
-        key: `c-${i}`, pt: p.pt, radius: 8, color: COLLECTIVE_COLOR, legIndex: p.legIndex,
+        key: `c-${i}`, pt: p.pt, radius: p.point.isWaypoint ? 6 : 8, color: COLLECTIVE_COLOR, legIndex: p.legIndex,
         tooltip: (
           <>
-            {p.u.photos?.[0] && <img className="rodeo-tooltip-thumb" src={p.u.photos[0].url} alt="" />}
-            <b>Together</b><br />{data.legs[p.legIndex].to_place}
+            {p.point.photos?.[0] && <img className="rodeo-tooltip-thumb" src={p.point.photos[0].url} alt="" />}
+            <b>Together</b><br />{label}
           </>
         ),
       });
@@ -243,8 +310,11 @@ export default function RodeoPublic() {
     return out;
   }, [teamPaths, collectivePoints, data]);
 
-  if (err) return <div className="rodeo-empty"><p>{err}</p></div>;
-  if (!data) return <div className="rodeo-loading">Loading the Rodeo...</div>;
+  // Same outer shell (and same 100dvh sizing) as the loaded view below, so
+  // there's no height mismatch/jump between the loading and loaded states on
+  // mobile, where 100vh alone can disagree with the actual visible viewport.
+  if (err) return <div className="rodeo-public map-view"><div className="rodeo-empty"><p>{err}</p></div></div>;
+  if (!data) return <div className="rodeo-public map-view"><div className="rodeo-loading">Loading the Rodeo...</div></div>;
 
   const leader = data.scoreboard.ben === data.scoreboard.miki ? null
     : (data.scoreboard.ben > data.scoreboard.miki ? 'ben' : 'miki');
@@ -256,9 +326,10 @@ export default function RodeoPublic() {
           <div className={`rodeo-modal ${INTRO[step].hero ? 'hero' : ''}`}>
             {INTRO[step].hero && <img className="rodeo-modal-hero" src="/rodeo-hero.png" alt="Ben, Miki, John and Bruce in front of Istanbul and European landmarks" />}
             <div className="rodeo-modal-body">
+              <button className="rodeo-x" onClick={() => setIntro(false)} aria-label="Skip intro">×</button>
               <span className="rodeo-kicker">The Rodeo: Bosphorus or Bust</span>
               <h2>{INTRO[step].title}</h2>
-              <div className="rodeo-modal-copy">{INTRO[step].body}</div>
+              <div className="rodeo-modal-copy">{(isMobile && INTRO[step].mobileBody) || INTRO[step].body}</div>
               <button className="rodeo-btn big" onClick={() => (step < INTRO.length - 1 ? setStep(step + 1) : setIntro(false))}>
                 {INTRO[step].button}
               </button>
@@ -303,6 +374,7 @@ export default function RodeoPublic() {
                 pathOptions={{ color: TEAMS[tk].color, weight: 2.5, dashArray: '2 8', lineCap: 'round' }} />
             ))}
             <Markers markers={markers} onSelect={setOpenLeg} />
+            <MapLock active={intro || openLeg != null} />
           </MapContainer>
           <p className="rodeo-map-note">Tap any dot for the full story. Both teams often land in the same city, so the trails curve apart.</p>
         </div>
@@ -413,6 +485,94 @@ function PhotoCarousel({ photos }) {
   );
 }
 
+// Public comments on a leg, Turnstile-verified and moderated (see
+// supabase/functions/rodeo-comment). Reads live from Supabase (not the static
+// snapshot) so a new comment or reply shows up without waiting on the next
+// "Publish Rodeo snapshot" run.
+function Comments({ legId }) {
+  const [comments, setComments] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [name, setName] = useState('');
+  const [body, setBody] = useState('');
+  const [token, setToken] = useState('');
+  const [status, setStatus] = useState('');
+  const [busy, setBusy] = useState(false);
+  const widgetRef = useRef(null);
+  const widgetId = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    rodeo.from('rodeo_comments')
+      .select('id,author_name,body,created_at,reply_body,replied_at,replied_by')
+      .eq('leg_id', legId).eq('published', true)
+      .order('created_at', { ascending: true })
+      .then(({ data }) => { if (!cancelled) { setComments(data ?? []); setLoaded(true); } });
+    return () => { cancelled = true; };
+  }, [legId]);
+
+  useEffect(() => {
+    if (!RODEO_TURNSTILE_SITE_KEY || !widgetRef.current || !window.turnstile) return;
+    widgetId.current = window.turnstile.render(widgetRef.current, {
+      sitekey: RODEO_TURNSTILE_SITE_KEY,
+      callback: (t) => setToken(t),
+    });
+    return () => { if (widgetId.current != null) window.turnstile?.remove(widgetId.current); };
+  }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!body.trim()) { setStatus('Say something first.'); return; }
+    if (!token) { setStatus('Please complete the check above.'); return; }
+    setBusy(true); setStatus('');
+    try {
+      const res = await fetch(RODEO_COMMENT_FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leg_id: legId, author_name: name, body, turnstileToken: token }),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.ok) throw new Error(result.error || 'Could not post comment.');
+      setBody('');
+      setStatus("Thanks! Your comment is held for a quick check before it appears.");
+      if (widgetId.current != null && window.turnstile) window.turnstile.reset(widgetId.current);
+      setToken('');
+    } catch (err) {
+      setStatus(err.message || 'Could not post comment.');
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="rodeo-comments">
+      <h4>Comments</h4>
+      {loaded && comments.length === 0 && <p className="rodeo-muted">No comments yet - be the first.</p>}
+      {comments.length > 0 && (
+        <ul className="rodeo-comment-list">
+          {comments.map((c) => (
+            <li key={c.id} className="rodeo-comment">
+              <b>{c.author_name || 'Someone'}</b>
+              <p>{c.body}</p>
+              {c.reply_body && (
+                <div className="rodeo-comment-reply">
+                  <b>{c.replied_by || 'Reply'}</b>
+                  <p>{c.reply_body}</p>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <form className="rodeo-comment-form" onSubmit={submit}>
+        <input placeholder="Your name (optional)" value={name} onChange={(e) => setName(e.target.value)} />
+        <textarea rows={2} placeholder="Leave a comment..." value={body} onChange={(e) => setBody(e.target.value)} />
+        {RODEO_TURNSTILE_SITE_KEY && <div ref={widgetRef} />}
+        <button type="submit" className="rodeo-btn ghost small" disabled={busy}>{busy ? 'Posting...' : 'Post comment'}</button>
+        {status && <p className="rodeo-fx-preview">{status}</p>}
+      </form>
+    </div>
+  );
+}
+
 function LegDetail({ leg, onClose }) {
   const ups = leg.updates.filter((u) => u.team != null || leg.scope === 'together');
   return (
@@ -435,10 +595,25 @@ function LegDetail({ leg, onClose }) {
                   </div>
                   {u.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(u.body)} />}
                   <PhotoCarousel photos={u.photos} />
+                  {u.waypoints?.length > 0 && (
+                    <div className="rodeo-waypoints-stack">
+                      {u.waypoints.map((w, wi) => (
+                        <div key={wi} className="rodeo-waypoint-card">
+                          {w.title && <h4>{w.title}</h4>}
+                          {(w.place_city || w.place_country) && (
+                            <p className="rodeo-waypoint-place">{[w.place_city, w.place_country].filter(Boolean).join(', ')}</p>
+                          )}
+                          {w.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(w.body)} />}
+                          <PhotoCarousel photos={w.photos} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
+          <Comments legId={leg.id} />
         </div>
       </div>
     </div>

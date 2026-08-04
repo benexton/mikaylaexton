@@ -139,3 +139,107 @@ create policy "rodeo media read" on storage.objects
 alter table public.rodeo_updates add column if not exists money_nzd_minor int;
 comment on column public.rodeo_updates.money_nzd_minor is
   'money_minor converted to NZD cents at filing time via a live FX rate, so cross-currency legs score fairly';
+
+-- 8. Place text (idempotent add) ---------------------------------------------
+-- The Town/City + Country a traveller typed, kept as-typed alongside the
+-- lat/lng that text was geocoded to - so editing a saved update can prefill
+-- these losslessly, and a bad geocode is still visible/editable later instead
+-- of just a mystery pin.
+alter table public.rodeo_updates add column if not exists place_city text;
+alter table public.rodeo_updates add column if not exists place_country text;
+
+-- 9. Waypoints ------------------------------------------------------------
+-- A leg summary (rodeo_updates) stays one row per (leg, team) and keeps the
+-- scoring fields. Waypoints are any number of extra story/photo dots a team
+-- drops along the same leg - no money/time/countries, no scoring impact.
+-- leg_id/team are denormalized from the parent update purely so RLS here can
+-- mirror rodeo_updates' policies exactly without a join.
+create table if not exists public.rodeo_waypoints (
+  id                uuid primary key default gen_random_uuid(),
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now(),
+
+  update_id         uuid not null references public.rodeo_updates (id) on delete cascade,
+  leg_id            uuid not null references public.rodeo_legs (id) on delete cascade,
+  team              rodeo_team,
+
+  title             text,
+  body              text,
+  place_city        text,
+  place_country     text,
+  lat               double precision,
+  lng               double precision,
+  arrived_at        timestamptz,
+
+  photos            jsonb not null default '[]'::jsonb,
+  sort_order        int not null default 0
+);
+
+create index if not exists rodeo_waypoints_update_ix on public.rodeo_waypoints (update_id);
+create index if not exists rodeo_waypoints_leg_ix on public.rodeo_waypoints (leg_id);
+
+drop trigger if exists trg_rodeo_waypoints_touch on public.rodeo_waypoints;
+create trigger trg_rodeo_waypoints_touch before update on public.rodeo_waypoints
+  for each row execute function public.rodeo_touch_updated_at();
+
+alter table public.rodeo_waypoints enable row level security;
+
+-- Waypoints have no published flag of their own - they're only ever read
+-- through the public snapshot export (service role, bypasses RLS) or by a
+-- signed-in traveller in HQ. Same read-everything / write-your-own-team shape
+-- as rodeo_updates.
+drop policy if exists "rodeo waypoints read" on public.rodeo_waypoints;
+create policy "rodeo waypoints read" on public.rodeo_waypoints
+  for select to authenticated using (true);
+
+drop policy if exists "rodeo waypoints write" on public.rodeo_waypoints;
+create policy "rodeo waypoints write" on public.rodeo_waypoints
+  for all to authenticated
+  using (team is null or team::text = public.rodeo_current_team())
+  with check (team is null or team::text = public.rodeo_current_team());
+
+-- 10. Comments --------------------------------------------------------------
+-- Public visitors can comment on a leg. Comments are only ever written by the
+-- rodeo-comment edge function (service role, verifies a Turnstile token first
+-- and bypasses RLS entirely) - there is deliberately NO insert policy here,
+-- so hitting this table directly with the anon key can never write a row,
+-- Turnstile or not. New comments land unpublished; a traveller approves and
+-- optionally replies from HQ.
+create table if not exists public.rodeo_comments (
+  id                uuid primary key default gen_random_uuid(),
+  created_at        timestamptz not null default now(),
+
+  leg_id            uuid not null references public.rodeo_legs (id) on delete cascade,
+  author_name       text,
+  body              text not null,
+  published         boolean not null default false,
+
+  reply_body        text,
+  replied_at        timestamptz,
+  replied_by        text
+);
+
+create index if not exists rodeo_comments_leg_ix on public.rodeo_comments (leg_id);
+create index if not exists rodeo_comments_pub_ix on public.rodeo_comments (published);
+
+alter table public.rodeo_comments enable row level security;
+
+-- Anyone (even signed-out visitors) can read published comments.
+drop policy if exists "rodeo comments read published" on public.rodeo_comments;
+create policy "rodeo comments read published" on public.rodeo_comments
+  for select to anon, authenticated
+  using (published = true);
+
+-- Signed-in travellers can also see the unpublished moderation queue.
+drop policy if exists "rodeo comments read all" on public.rodeo_comments;
+create policy "rodeo comments read all" on public.rodeo_comments
+  for select to authenticated using (true);
+
+-- Approve/reply/delete from HQ. No insert policy for anyone - see note above.
+drop policy if exists "rodeo comments moderate" on public.rodeo_comments;
+create policy "rodeo comments moderate" on public.rodeo_comments
+  for update to authenticated using (true) with check (true);
+
+drop policy if exists "rodeo comments delete" on public.rodeo_comments;
+create policy "rodeo comments delete" on public.rodeo_comments
+  for delete to authenticated using (true);

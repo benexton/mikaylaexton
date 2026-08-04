@@ -117,9 +117,21 @@ def main():
                               "order": "leg_no.asc"})
     updates = get("rodeo_updates", {
         "select": "id,leg_id,team,title,body,money_minor,currency,money_nzd_minor,duration_minutes,"
-                  "countries,lat,lng,arrived_at,photos,submitted_by",
+                  "countries,place_city,place_country,lat,lng,arrived_at,photos,submitted_by",
         "published": "eq.true",
     })
+    # Waypoints have no published flag of their own - visibility inherits from
+    # their parent update, so only keep waypoints whose update made the cut above.
+    published_update_ids = {u["id"] for u in updates}
+    waypoints = get("rodeo_waypoints", {
+        "select": "update_id,title,body,place_city,place_country,lat,lng,arrived_at,photos",
+        "order": "sort_order.asc",
+    })
+    waypoints_by_update = {}
+    for w in waypoints:
+        if w["update_id"] not in published_update_ids:
+            continue
+        waypoints_by_update.setdefault(w["update_id"], []).append(w)
 
     updates_by_leg = {}
     for u in updates:
@@ -131,6 +143,7 @@ def main():
     for leg in legs:
         lid = leg["id"]
         out_legs.append({
+            "id": lid,  # needed publicly so the comment form knows which leg to attach to
             "leg_no": leg.get("leg_no"),
             "scope": leg.get("scope"),
             "from_place": leg.get("from_place"),
@@ -147,10 +160,22 @@ def main():
                     "money_nzd_minor": u.get("money_nzd_minor"),
                     "duration_minutes": u.get("duration_minutes"),
                     "countries": u.get("countries") or [],
+                    "place_city": u.get("place_city"), "place_country": u.get("place_country"),
                     "lat": u.get("lat"), "lng": u.get("lng"),
                     "arrived_at": u.get("arrived_at"),
                     "photos": u.get("photos") or [],
                     "submitted_by": u.get("submitted_by"),
+                    "waypoints": [
+                        {
+                            "title": w.get("title"),
+                            "body": w.get("body"),
+                            "place_city": w.get("place_city"), "place_country": w.get("place_country"),
+                            "lat": w.get("lat"), "lng": w.get("lng"),
+                            "arrived_at": w.get("arrived_at"),
+                            "photos": w.get("photos") or [],
+                        }
+                        for w in waypoints_by_update.get(u["id"], [])
+                    ],
                 }
                 for u in sorted(updates_by_leg.get(lid, []), key=lambda x: (x.get("team") or ""))
             ],

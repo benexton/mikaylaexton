@@ -66,10 +66,25 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-photos { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .rodeo-photo { width: 130px; }
 .rodeo-photo img { width: 130px; height: 90px; object-fit: cover; border-radius: 8px; }
-.rodeo-photo input { font-size: .8rem; margin-top: 4px; }
+.rodeo-photo textarea { font-size: .8rem; margin-top: 4px; resize: none; overflow: hidden; min-height: 2.2em; }
 .rodeo-photo button { font-size: .78rem; color: #b23; background: none; border: 0; cursor: pointer; padding: 2px 0; }
 .rodeo-check { flex-direction: row; align-items: center; gap: 8px; }
 .rodeo-check input { width: auto; }
+.rodeo-danger { color: #b23; border-color: #e0b3ac; margin-top: 8px; }
+.rodeo-danger:hover { background: #fdf0ee; border-color: #b23; }
+
+/* waypoints (HQ) */
+.rodeo-waypoint-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rodeo-waypoint-row { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.rodeo-waypoint-row img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; flex: 0 0 auto; }
+.rodeo-waypoint-row-body { flex: 1 1 auto; font-size: .9rem; }
+.rodeo-waypoint-form { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; }
+
+/* comment moderation (HQ) */
+.rodeo-comment-mod-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.rodeo-comment-mod-row { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.rodeo-comment-mod-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; font-size: .82rem; }
+.rodeo-comment-mod-row textarea { margin-top: 6px; }
 
 /* public header: a score either side of the title, title centered */
 .rodeo-header { max-width: 960px; margin: 0 auto; padding: 20px 18px 4px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; text-align: center; }
@@ -90,11 +105,25 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-map .leaflet-container { border-radius: 16px; box-shadow: var(--shadow); }
 .rodeo-map-note { text-align: center; color: var(--ink-soft); font-size: .86rem; margin: 10px; }
 
-/* map view: fit header + toggle + map into one screen, no page scroll */
-.rodeo-public.map-view { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+/* map view: fit header + toggle + map into one screen, no page scroll.
+   100dvh (with a 100vh fallback for older browsers) so the loading state
+   below and the loaded shell are always the same height on mobile, where vh
+   is the *largest* possible viewport (address bar collapsed) - without dvh
+   the two states can disagree by the height of the browser chrome and jump
+   or flash when the loading screen swaps to the loaded shell. */
+.rodeo-public.map-view {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 .rodeo-public.map-view .rodeo-header,
 .rodeo-public.map-view .rodeo-toggle { flex: 0 0 auto; }
 .rodeo-public.map-view .rodeo-map { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.rodeo-public.map-view .rodeo-loading,
+.rodeo-public.map-view .rodeo-empty { flex: 1 1 auto; min-height: 0; }
 
 /* scoreboard breakdown, top of timeline */
 .rodeo-scorecard { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1000px; margin: 0 auto 34px; }
@@ -150,7 +179,17 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 
 /* intro + detail modal */
 .rodeo-modal-backdrop { position: fixed; inset: 0; background: rgba(20,34,64,.55); display: grid; place-items: center; padding: 18px; z-index: 1000; }
-.rodeo-modal { background: var(--paper-2); border-radius: 18px; max-width: 480px; width: 100%; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); position: relative; }
+/* Capped height + its own scroll, so content taller than the screen (common
+   on mobile, and now more likely with waypoints stacked under a leg summary)
+   scrolls inside the card instead of being silently clipped by overflow:hidden
+   with no way to reach it - and so a touch-drag on the card scrolls the card,
+   not whatever's underneath it (the map). */
+.rodeo-modal {
+  background: var(--paper-2); border-radius: 18px; max-width: 480px; width: 100%;
+  max-height: 88vh; max-height: 88dvh;
+  overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3); position: relative;
+}
 .rodeo-modal.wide { max-width: 820px; }
 .rodeo-modal-hero { display: block; width: 100%; height: auto; }
 .rodeo-modal-body { padding: 24px; }
@@ -164,6 +203,22 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-detail-grid.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .rodeo-detail-col { border-top: 4px solid; border-radius: 12px; background: var(--paper); padding: 14px; }
 .rodeo-detail-col h3 { font-family: var(--sans); font-size: 1.05rem; }
+
+/* waypoints stacked beneath a leg summary, in the detail modal */
+.rodeo-waypoints-stack { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 14px; }
+.rodeo-waypoint-card h4 { font-family: var(--sans); font-size: .95rem; margin: 0 0 2px; }
+.rodeo-waypoint-place { font-size: .8rem; color: var(--ink-soft); margin: 0 0 4px; }
+
+/* public comments, in the detail modal */
+.rodeo-comments { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+.rodeo-comments h4 { font-family: var(--sans); font-size: 1rem; margin: 0 0 10px; }
+.rodeo-comment-list { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.rodeo-comment { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: .88rem; }
+.rodeo-comment p { margin: 3px 0 0; }
+.rodeo-comment-reply { margin-top: 8px; padding: 8px 10px; background: var(--paper-2); border-left: 3px solid var(--sky); border-radius: 6px; font-size: .86rem; }
+.rodeo-comment-reply p { margin: 2px 0 0; }
+.rodeo-comment-form { display: flex; flex-direction: column; gap: 8px; max-width: 420px; }
+.rodeo-comment-form textarea { resize: vertical; }
 
 /* mobile */
 @media (max-width: 760px) {

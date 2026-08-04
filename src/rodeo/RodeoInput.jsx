@@ -1,38 +1,99 @@
 import { useEffect, useMemo, useState } from 'react';
 import { rodeo, uploadRodeoPhoto, TEAMS } from './rodeoSupabase.js';
 import { nzdRate, toNzdMinor } from './currency.js';
+import { geocodePlace } from './geocode.js';
 
 const LEG_SELECT = 'id,leg_no,scope,from_place,to_place,envelope_opened_at';
 const UPD_SELECT =
-  'id,leg_id,team,title,body,money_minor,currency,money_nzd_minor,duration_minutes,countries,lat,lng,arrived_at,photos,published';
+  'id,leg_id,team,title,body,money_minor,currency,money_nzd_minor,duration_minutes,countries,' +
+  'place_city,place_country,lat,lng,arrived_at,photos,published';
+const WP_SELECT =
+  'id,update_id,leg_id,team,title,body,place_city,place_country,lat,lng,arrived_at,photos,sort_order';
+const CMT_SELECT =
+  'id,leg_id,author_name,body,created_at,published,reply_body,replied_at,replied_by';
+
+// Caption field that grows with its content instead of clipping long text.
+function AutoTextarea({ value, onChange, placeholder }) {
+  function resize(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }
+  return (
+    <textarea
+      rows={1}
+      value={value}
+      placeholder={placeholder}
+      ref={resize}
+      onChange={(e) => { resize(e.target); onChange(e); }}
+    />
+  );
+}
+
+// One row in the HQ comment-moderation list: publish toggle, delete, and a
+// reply draft kept local until "Save reply" so we don't write on every keystroke.
+function CommentRow({ comment, legLabel, onTogglePublished, onSaveReply, onDelete }) {
+  const [reply, setReply] = useState(comment.reply_body ?? '');
+  const [busy, setBusy] = useState(false);
+  return (
+    <li className="rodeo-comment-mod-row">
+      <div className="rodeo-comment-mod-head">
+        <span className="rodeo-muted">{legLabel}</span>
+        <label className="rodeo-check">
+          <input type="checkbox" checked={comment.published}
+            onChange={(e) => onTogglePublished(comment.id, e.target.checked)} />
+          Published
+        </label>
+        <button type="button" className="rodeo-btn ghost small rodeo-danger" onClick={() => onDelete(comment.id)}>Delete</button>
+      </div>
+      <p><b>{comment.author_name || 'Someone'}</b>: {comment.body}</p>
+      <AutoTextarea placeholder="Write a reply..." value={reply} onChange={(e) => setReply(e.target.value)} />
+      <button type="button" className="rodeo-btn ghost small" disabled={busy}
+        onClick={async () => { setBusy(true); await onSaveReply(comment.id, reply); setBusy(false); }}>
+        {busy ? 'Saving...' : 'Save reply'}
+      </button>
+    </li>
+  );
+}
 
 function blankUpdate() {
   return {
     id: null, title: '', body: '', dollars: '', currency: 'USD',
-    hours: '', minutes: '', countries: [], lat: '', lng: '', photos: [], published: false,
+    hours: '', minutes: '', countries: [],
+    city: '', country: '', lat: '', lng: '', geoStatus: '',
+    photos: [], published: false,
   };
 }
 
 export default function RodeoInput({ team, teamName, signOut }) {
   const [legs, setLegs] = useState([]);
   const [updates, setUpdates] = useState([]);
+  const [waypoints, setWaypoints] = useState([]);
+  const [comments, setComments] = useState([]);
   const [legId, setLegId] = useState('');
   const [form, setForm] = useState(blankUpdate());
   const [countryDraft, setCountryDraft] = useState('');
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [fxPreview, setFxPreview] = useState('');
+  const [wpForm, setWpForm] = useState(null); // null = waypoint editor closed
+  const [wpBusy, setWpBusy] = useState(false);
+  const [wpStatus, setWpStatus] = useState('');
 
   // New-leg fields
   const [newLeg, setNewLeg] = useState({ from_place: '', to_place: '', scope: 'race' });
 
   async function loadAll() {
-    const [{ data: L }, { data: U }] = await Promise.all([
+    const [{ data: L }, { data: U }, { data: W }, { data: C }] = await Promise.all([
       rodeo.from('rodeo_legs').select(LEG_SELECT).order('leg_no', { ascending: true }),
       rodeo.from('rodeo_updates').select(UPD_SELECT),
+      rodeo.from('rodeo_waypoints').select(WP_SELECT).order('sort_order', { ascending: true }),
+      rodeo.from('rodeo_comments').select(CMT_SELECT).order('created_at', { ascending: false }),
     ]);
     setLegs(L ?? []);
     setUpdates(U ?? []);
+    setWaypoints(W ?? []);
+    setComments(C ?? []);
   }
   useEffect(() => { loadAll(); }, []);
 
@@ -57,7 +118,9 @@ export default function RodeoInput({ team, teamName, signOut }) {
       hours: mins ? Math.floor(mins / 60).toString() : '',
       minutes: mins ? (mins % 60).toString() : '',
       countries: existing.countries ?? [],
+      city: existing.place_city ?? '', country: existing.place_country ?? '',
       lat: existing.lat ?? '', lng: existing.lng ?? '',
+      geoStatus: existing.lat != null && existing.lng != null ? 'Located.' : '',
       photos: existing.photos ?? [],
       published: !!existing.published,
     });
@@ -121,12 +184,19 @@ export default function RodeoInput({ team, teamName, signOut }) {
     e.target.value = '';
   }
 
-  function useMyLocation() {
-    if (!navigator.geolocation) { setStatus('No geolocation on this device.'); return; }
-    navigator.geolocation.getCurrentPosition(
-      (p) => setForm((f) => ({ ...f, lat: +p.coords.latitude.toFixed(5), lng: +p.coords.longitude.toFixed(5) })),
-      () => setStatus('Could not read location.')
-    );
+  // Resolve the typed Town/City + Country to a pin via Nominatim. Called on
+  // blur, not per-keystroke, so we don't hammer the free lookup API.
+  async function locate() {
+    if (!form.city.trim() && !form.country.trim()) return;
+    setForm((f) => ({ ...f, geoStatus: 'Locating...' }));
+    try {
+      const hit = await geocodePlace(form.city, form.country);
+      setForm((f) => hit
+        ? { ...f, lat: hit.lat, lng: hit.lng, geoStatus: `Found: ${hit.displayName}` }
+        : { ...f, lat: '', lng: '', geoStatus: "Couldn't find that place - try being more specific." });
+    } catch (err) {
+      setForm((f) => ({ ...f, lat: '', lng: '', geoStatus: err.message || 'Location lookup failed.' }));
+    }
   }
 
   async function save() {
@@ -151,6 +221,8 @@ export default function RodeoInput({ team, teamName, signOut }) {
       money_nzd_minor: moneyNzdMinor,
       duration_minutes: mins || null,
       countries: form.countries,
+      place_city: form.city.trim() || null,
+      place_country: form.country.trim() || null,
       lat: form.lat === '' ? null : parseFloat(form.lat),
       lng: form.lng === '' ? null : parseFloat(form.lng),
       photos: form.photos,
@@ -166,9 +238,129 @@ export default function RodeoInput({ team, teamName, signOut }) {
     await loadAll();
   }
 
+  async function deleteUpdate() {
+    if (!form.id) return;
+    if (!window.confirm('Delete this entire leg summary, including any waypoints under it? This cannot be undone.')) return;
+    setBusy(true); setStatus('Deleting...');
+    const { error } = await rodeo.from('rodeo_updates').delete().eq('id', form.id);
+    setBusy(false);
+    if (error) { setStatus(error.message); return; }
+    setStatus('Deleted. Run the "Publish Rodeo snapshot" Action to push it live.');
+    await loadAll();
+  }
+
+  // ---- waypoints: any number of extra story/photo dots under one summary ----
+  const legWaypoints = useMemo(
+    () => (form.id ? waypoints.filter((w) => w.update_id === form.id) : []),
+    [waypoints, form.id]
+  );
+
+  useEffect(() => { setWpForm(null); setWpStatus(''); }, [legId]);
+
+  function blankWaypoint() {
+    return { id: null, title: '', body: '', city: '', country: '', lat: '', lng: '', geoStatus: '', arrivedAt: '', photos: [] };
+  }
+  function editWaypoint(w) {
+    setWpForm({
+      id: w.id, title: w.title ?? '', body: w.body ?? '',
+      city: w.place_city ?? '', country: w.place_country ?? '',
+      lat: w.lat ?? '', lng: w.lng ?? '',
+      geoStatus: w.lat != null && w.lng != null ? 'Located.' : '',
+      arrivedAt: w.arrived_at ? w.arrived_at.slice(0, 16) : '',
+      photos: w.photos ?? [],
+    });
+    setWpStatus('');
+  }
+
+  async function locateWaypoint() {
+    if (!wpForm.city.trim() && !wpForm.country.trim()) return;
+    setWpForm((f) => ({ ...f, geoStatus: 'Locating...' }));
+    try {
+      const hit = await geocodePlace(wpForm.city, wpForm.country);
+      setWpForm((f) => hit
+        ? { ...f, lat: hit.lat, lng: hit.lng, geoStatus: `Found: ${hit.displayName}` }
+        : { ...f, lat: '', lng: '', geoStatus: "Couldn't find that place - try being more specific." });
+    } catch (err) {
+      setWpForm((f) => ({ ...f, lat: '', lng: '', geoStatus: err.message || 'Location lookup failed.' }));
+    }
+  }
+
+  async function onWaypointPhotos(e) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length || !leg) return;
+    setWpBusy(true); setWpStatus('Uploading photos...');
+    try {
+      const prefix = `${targetTeam ?? 'together'}/${leg.leg_no}/`;
+      const added = [];
+      for (const f of files) added.push({ url: await uploadRodeoPhoto(f, prefix), caption: '' });
+      setWpForm((f) => ({ ...f, photos: [...f.photos, ...added] }));
+      setWpStatus('Photos added. Remember to save.');
+    } catch (err) { setWpStatus(err.message || 'Upload failed.'); }
+    setWpBusy(false);
+    e.target.value = '';
+  }
+
+  async function saveWaypoint() {
+    if (!form.id || !leg) return;
+    setWpBusy(true); setWpStatus('Saving...');
+    const row = {
+      update_id: form.id, leg_id: leg.id, team: targetTeam,
+      title: wpForm.title || null, body: wpForm.body || null,
+      place_city: wpForm.city.trim() || null, place_country: wpForm.country.trim() || null,
+      lat: wpForm.lat === '' ? null : parseFloat(wpForm.lat),
+      lng: wpForm.lng === '' ? null : parseFloat(wpForm.lng),
+      arrived_at: wpForm.arrivedAt ? new Date(wpForm.arrivedAt).toISOString() : null,
+      photos: wpForm.photos,
+    };
+    let error;
+    if (wpForm.id) ({ error } = await rodeo.from('rodeo_waypoints').update(row).eq('id', wpForm.id));
+    else ({ error } = await rodeo.from('rodeo_waypoints').insert(row));
+    setWpBusy(false);
+    if (error) { setWpStatus(error.message); return; }
+    setWpStatus('Saved.');
+    setWpForm(null);
+    await loadAll();
+  }
+
+  async function deleteWaypoint(id) {
+    if (!window.confirm('Delete this waypoint? This cannot be undone.')) return;
+    setWpBusy(true);
+    const { error } = await rodeo.from('rodeo_waypoints').delete().eq('id', id);
+    setWpBusy(false);
+    if (error) { setWpStatus(error.message); return; }
+    await loadAll();
+  }
+
   const legLabel = (l) =>
     `Leg ${l.leg_no}: ${l.from_place ? l.from_place + ' to ' : ''}${l.to_place ?? '?'}` +
     (l.scope === 'together' ? '  (together)' : '');
+
+  // ---- comment moderation: public comments land unpublished, we approve/reply here ----
+  function commentLegLabel(c) {
+    const l = legs.find((x) => x.id === c.leg_id);
+    return l ? legLabel(l) : 'Unknown leg';
+  }
+  async function toggleCommentPublished(id, published) {
+    const { error } = await rodeo.from('rodeo_comments').update({ published }).eq('id', id);
+    if (error) { setStatus(error.message); return; }
+    await loadAll();
+  }
+  async function saveCommentReply(id, replyBody) {
+    const text = replyBody.trim();
+    const { error } = await rodeo.from('rodeo_comments').update({
+      reply_body: text || null,
+      replied_at: text ? new Date().toISOString() : null,
+      replied_by: text ? teamName : null,
+    }).eq('id', id);
+    if (error) { setStatus(error.message); return; }
+    await loadAll();
+  }
+  async function deleteComment(id) {
+    if (!window.confirm('Delete this comment? This cannot be undone.')) return;
+    const { error } = await rodeo.from('rodeo_comments').delete().eq('id', id);
+    if (error) { setStatus(error.message); return; }
+    await loadAll();
+  }
 
   return (
     <div className="rodeo-hq">
@@ -256,19 +448,20 @@ export default function RodeoInput({ team, teamName, signOut }) {
               <button type="button" className="rodeo-btn ghost" onClick={addCountry}>Add</button>
             </div>
 
+            <label>Where this pin drops on the map</label>
             <div className="rodeo-grid2">
               <div>
-                <label>Latitude</label>
-                <input type="number" step="0.00001" value={form.lat}
-                  onChange={(e) => setForm({ ...form, lat: e.target.value })} />
+                <input placeholder="Town/city" value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value, geoStatus: '' })}
+                  onBlur={locate} />
               </div>
               <div>
-                <label>Longitude</label>
-                <input type="number" step="0.00001" value={form.lng}
-                  onChange={(e) => setForm({ ...form, lng: e.target.value })} />
+                <input placeholder="Country" value={form.country}
+                  onChange={(e) => setForm({ ...form, country: e.target.value, geoStatus: '' })}
+                  onBlur={locate} />
               </div>
             </div>
-            <button type="button" className="rodeo-btn ghost small" onClick={useMyLocation}>Use my current location</button>
+            {form.geoStatus && <p className="rodeo-fx-preview">{form.geoStatus}</p>}
 
             <label>Photos</label>
             <input type="file" accept="image/*" capture="environment" multiple onChange={onPhotos} />
@@ -276,7 +469,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
               {form.photos.map((p, i) => (
                 <div key={i} className="rodeo-photo">
                   <img src={p.url} alt="" />
-                  <input placeholder="caption" value={p.caption}
+                  <AutoTextarea placeholder="caption" value={p.caption}
                     onChange={(e) => setForm((f) => { const ph = [...f.photos]; ph[i] = { ...ph[i], caption: e.target.value }; return { ...f, photos: ph }; })} />
                   <button type="button" onClick={() => setForm((f) => ({ ...f, photos: f.photos.filter((_, j) => j !== i) }))}>Remove</button>
                 </div>
@@ -292,9 +485,101 @@ export default function RodeoInput({ team, teamName, signOut }) {
             <button className="rodeo-btn big" onClick={save} disabled={busy}>
               {busy ? 'Working...' : (form.id ? 'Update this leg' : 'Save this leg')}
             </button>
+            {form.id && (
+              <button type="button" className="rodeo-btn ghost small rodeo-danger" onClick={deleteUpdate} disabled={busy}>
+                Delete this update
+              </button>
+            )}
           </>
         )}
         {status && <p className="rodeo-status">{status}</p>}
+      </section>
+
+      {leg && form.id && (
+        <section className="rodeo-panel">
+          <h2>Waypoints</h2>
+          <p className="rodeo-muted">
+            Extra dots dropped along this leg &mdash; a few photos and a line or two, no stats. Drop as many as you like.
+          </p>
+
+          {legWaypoints.length > 0 && (
+            <ul className="rodeo-waypoint-list">
+              {legWaypoints.map((w) => (
+                <li key={w.id} className="rodeo-waypoint-row">
+                  {w.photos?.[0] && <img src={w.photos[0].url} alt="" />}
+                  <div className="rodeo-waypoint-row-body">
+                    <b>{w.title || '(untitled waypoint)'}</b>
+                    {(w.place_city || w.place_country) && (
+                      <span className="rodeo-muted"> &mdash; {[w.place_city, w.place_country].filter(Boolean).join(', ')}</span>
+                    )}
+                  </div>
+                  <button type="button" className="rodeo-btn ghost small" onClick={() => editWaypoint(w)}>Edit</button>
+                  <button type="button" className="rodeo-btn ghost small rodeo-danger" onClick={() => deleteWaypoint(w.id)}>Delete</button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {!wpForm ? (
+            <button type="button" className="rodeo-btn ghost" onClick={() => setWpForm(blankWaypoint())}>+ Add a waypoint</button>
+          ) : (
+            <div className="rodeo-waypoint-form">
+              <label>Headline</label>
+              <input value={wpForm.title} onChange={(e) => setWpForm({ ...wpForm, title: e.target.value })}
+                placeholder="e.g. Roadside coffee in the Atlas" />
+
+              <label>The story (markdown ok)</label>
+              <textarea rows={3} value={wpForm.body} onChange={(e) => setWpForm({ ...wpForm, body: e.target.value })} />
+
+              <label>Where this pin drops on the map</label>
+              <div className="rodeo-grid2">
+                <input placeholder="Town/city" value={wpForm.city}
+                  onChange={(e) => setWpForm({ ...wpForm, city: e.target.value, geoStatus: '' })}
+                  onBlur={locateWaypoint} />
+                <input placeholder="Country" value={wpForm.country}
+                  onChange={(e) => setWpForm({ ...wpForm, country: e.target.value, geoStatus: '' })}
+                  onBlur={locateWaypoint} />
+              </div>
+              {wpForm.geoStatus && <p className="rodeo-fx-preview">{wpForm.geoStatus}</p>}
+
+              <label>Photos</label>
+              <input type="file" accept="image/*" capture="environment" multiple onChange={onWaypointPhotos} />
+              <div className="rodeo-photos">
+                {wpForm.photos.map((p, i) => (
+                  <div key={i} className="rodeo-photo">
+                    <img src={p.url} alt="" />
+                    <AutoTextarea placeholder="caption" value={p.caption}
+                      onChange={(e) => setWpForm((f) => { const ph = [...f.photos]; ph[i] = { ...ph[i], caption: e.target.value }; return { ...f, photos: ph }; })} />
+                    <button type="button" onClick={() => setWpForm((f) => ({ ...f, photos: f.photos.filter((_, j) => j !== i) }))}>Remove</button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rodeo-inline" style={{ marginTop: '.8em' }}>
+                <button type="button" className="rodeo-btn" onClick={saveWaypoint} disabled={wpBusy}>
+                  {wpBusy ? 'Working...' : (wpForm.id ? 'Update waypoint' : 'Save waypoint')}
+                </button>
+                <button type="button" className="rodeo-btn ghost" onClick={() => setWpForm(null)}>Cancel</button>
+              </div>
+            </div>
+          )}
+          {wpStatus && <p className="rodeo-status">{wpStatus}</p>}
+        </section>
+      )}
+
+      <section className="rodeo-panel">
+        <h2>Comments</h2>
+        <p className="rodeo-muted">Public comments land here unpublished. Approve to make one visible, or reply first.</p>
+        {comments.length === 0 ? (
+          <p className="rodeo-muted">No comments yet.</p>
+        ) : (
+          <ul className="rodeo-comment-mod-list">
+            {comments.map((c) => (
+              <CommentRow key={c.id} comment={c} legLabel={commentLegLabel(c)}
+                onTogglePublished={toggleCommentPublished} onSaveReply={saveCommentReply} onDelete={deleteComment} />
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );
