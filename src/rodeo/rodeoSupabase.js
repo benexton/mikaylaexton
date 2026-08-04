@@ -24,6 +24,11 @@ export const rodeo = createClient(url ?? '', anonKey ?? '', {
 
 export const RODEO_MEDIA_BUCKET = 'rodeo-media';
 
+// Edge Functions require an auth header by default (Supabase's gateway, not
+// our own code) - the anon key satisfies that. It's already public (shipped
+// in this same bundle for every other Supabase call), so no new exposure.
+export const RODEO_ANON_KEY = anonKey ?? '';
+
 // Team identity. `side` drives the timeline lane; `color` drives map trail,
 // markers, cards and scoreboard.
 export const TEAMS = {

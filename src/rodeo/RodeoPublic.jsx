@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { marked } from 'marked';
-import { rodeo, RODEO_SNAPSHOT_URL, RODEO_COMMENT_FN_URL, RODEO_TURNSTILE_SITE_KEY, TEAMS, COLLECTIVE_COLOR } from './rodeoSupabase.js';
+import { rodeo, RODEO_SNAPSHOT_URL, RODEO_COMMENT_FN_URL, RODEO_TURNSTILE_SITE_KEY, RODEO_ANON_KEY, TEAMS, COLLECTIVE_COLOR } from './rodeoSupabase.js';
 
 const INTRO = [
   {
@@ -527,7 +527,11 @@ function Comments({ legId }) {
     try {
       const res = await fetch(RODEO_COMMENT_FN_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: RODEO_ANON_KEY,
+          Authorization: `Bearer ${RODEO_ANON_KEY}`,
+        },
         body: JSON.stringify({ leg_id: legId, author_name: name, body, turnstileToken: token }),
       });
       const result = await res.json();
