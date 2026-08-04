@@ -178,7 +178,11 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-carousel-thumb img { width: 52px; height: 40px; object-fit: cover; border-radius: 4px; display: block; }
 
 /* intro + detail modal */
-.rodeo-modal-backdrop { position: fixed; inset: 0; background: rgba(20,34,64,.55); display: grid; place-items: center; padding: 18px; z-index: 1000; }
+/* z-index 1200: comfortably above Leaflet's own control layer, which the
+   library hard-codes to z-index 1000 - at an equal z-index the map (later in
+   the DOM) would win the stacking tie and paint its zoom control/attribution
+   at full brightness on top of this "dimmed" backdrop instead of under it. */
+.rodeo-modal-backdrop { position: fixed; inset: 0; background: rgba(20,34,64,.55); display: grid; place-items: center; padding: 18px; z-index: 1200; }
 /* Capped height + its own scroll, so content taller than the screen (common
    on mobile, and now more likely with waypoints stacked under a leg summary)
    scrolls inside the card instead of being silently clipped by overflow:hidden

@@ -163,6 +163,27 @@ function MapLock({ active }) {
   return null;
 }
 
+// Leaflet sizes its internal canvas/panes once, from its container's pixel
+// size at mount - it doesn't know when that size later changes for reasons
+// outside its control (a web font swapping in and nudging the header's
+// height, a mobile browser's address bar collapsing and changing 100dvh,
+// rotating the device). When that happens without an explicit invalidateSize
+// call, the map keeps rendering at its old (wrong) size, which is what makes
+// the zoom control and attribution appear to float over content above the
+// map - they're positioned correctly *within a stale-sized container*.
+// Watching the container directly, rather than only window resize, catches
+// every case that can shrink or grow it, whatever the cause.
+function MapResizeSync() {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    const ro = new ResizeObserver(() => map.invalidateSize());
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [map]);
+  return null;
+}
+
 // Nudge apart any dots that would render on top of (or overlapping) one another,
 // working in screen pixels at the current zoom so distinct-but-close updates stay
 // legible whether you're zoomed out over the whole trip or in on one city.
@@ -375,6 +396,7 @@ export default function RodeoPublic() {
             ))}
             <Markers markers={markers} onSelect={setOpenLeg} />
             <MapLock active={intro || openLeg != null} />
+            <MapResizeSync />
           </MapContainer>
           <p className="rodeo-map-note">Tap any dot for the full story. Both teams often land in the same city, so the trails curve apart.</p>
         </div>
