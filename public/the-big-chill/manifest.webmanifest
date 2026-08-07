@@ -1,0 +1,15 @@
+{
+  "name": "The Big Chill",
+  "short_name": "Big Chill",
+  "description": "A walking mystery game for Hanmer Springs.",
+  "start_url": "/the-big-chill/",
+  "scope": "/the-big-chill/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1c1f3a",
+  "theme_color": "#1c1f3a",
+  "icons": [
+    { "src": "/the-big-chill/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/the-big-chill/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

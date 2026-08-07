@@ -1,0 +1,102 @@
+import { useEffect, useRef, useState } from 'react';
+
+// Plays a character clip by filename from /the-big-chill/clips/. Real clips
+// don't exist yet (the family generates them via ElevenLabs + a lip-sync
+// tool - see docs/03-character-scripts.md), so a missing/erroring file falls
+// back to a captioned placeholder card instead of a broken player. Once real
+// MP4s land at that path, playback just starts working - no code change.
+//
+// Under `vite dev`, a missing clip path 200s back index.html (SPA fallback)
+// instead of 404ing, so the <video> never fires `error`. A load timeout
+// catches that case too, not just genuine network errors.
+export default function VideoCharacter({ clip, name, role, onDone, autoPlay = false }) {
+  const [mode, setMode] = useState(autoPlay ? 'playing' : 'idle');
+  const videoRef = useRef(null);
+  const loadTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    if (mode !== 'playing') return;
+    loadTimeoutRef.current = setTimeout(() => setMode('fallback'), 4000);
+    return () => clearTimeout(loadTimeoutRef.current);
+  }, [mode]);
+
+  if (!clip) return null;
+  const src = `/the-big-chill/clips/${clip.file}`;
+  const initials = (clip.character || name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  function play() {
+    setMode('playing');
+  }
+
+  function handleEnded() {
+    setMode('done');
+    onDone?.();
+  }
+
+  function handleError() {
+    setMode('fallback');
+  }
+
+  function handleLoaded() {
+    clearTimeout(loadTimeoutRef.current);
+  }
+
+  return (
+    <div className="bc-video-character">
+      <div className="bc-video-frame">
+        {mode === 'idle' && (
+          <button className="bc-video-play" onClick={play} aria-label={`Play ${clip.character || name}`}>
+            <span className="bc-video-avatar">{initials}</span>
+            <span className="bc-play-icon">&#9658;</span>
+          </button>
+        )}
+
+        {mode === 'playing' && (
+          <video
+            ref={videoRef}
+            className="bc-video-el"
+            src={src}
+            autoPlay
+            playsInline
+            controls={false}
+            onEnded={handleEnded}
+            onError={handleError}
+            onLoadedData={handleLoaded}
+          />
+        )}
+
+        {(mode === 'fallback' || mode === 'done') && (
+          <div className="bc-video-placeholder">
+            <span className="bc-video-avatar large">{initials}</span>
+            {mode === 'fallback' && <p className="bc-video-placeholder-note">Clip not recorded yet</p>}
+          </div>
+        )}
+      </div>
+
+      <div className="bc-caption-box">
+        <p className="bc-caption-name">{clip.character || name}</p>
+        <p className="bc-caption-text">{clip.caption}</p>
+      </div>
+
+      {(mode === 'fallback' || mode === 'idle') && (
+        <button
+          className="bc-btn bc-btn-primary bc-video-continue"
+          onClick={mode === 'idle' ? play : handleEnded}
+        >
+          {mode === 'idle' ? 'Play' : 'Continue'}
+        </button>
+      )}
+      {mode === 'done' && (
+        <button className="bc-btn bc-btn-primary bc-video-continue" onClick={onDone}>
+          Continue
+        </button>
+      )}
+    </div>
+  );
+}
