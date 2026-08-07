@@ -23,6 +23,8 @@ jobs:
           VITE_RODEO_SUPABASE_URL: ${{ secrets.VITE_RODEO_SUPABASE_URL }}
           VITE_RODEO_SUPABASE_ANON_KEY: ${{ secrets.VITE_RODEO_SUPABASE_ANON_KEY }}
           VITE_RODEO_TURNSTILE_SITE_KEY: ${{ secrets.VITE_RODEO_TURNSTILE_SITE_KEY }}
+          VITE_BIGCHILL_SUPABASE_URL: ${{ secrets.VITE_BIGCHILL_SUPABASE_URL }}
+          VITE_BIGCHILL_SUPABASE_ANON_KEY: ${{ secrets.VITE_BIGCHILL_SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist

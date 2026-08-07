@@ -11,10 +11,10 @@ import Certificate from './screens/Certificate.jsx';
 import VideoCharacter from './components/VideoCharacter.jsx';
 import BackButton from './components/BackButton.jsx';
 import { GAME_CONFIG, TELLS, NARRATOR_CLIPS } from './game.config.js';
+import { submitAccusation } from './lib/bigchillSupabase.js';
 
 const STOPS = GAME_CONFIG.stops;
 const SUSPECTS = GAME_CONFIG.suspects;
-const CULPRIT = SUSPECTS.find((s) => !s.clearedBy);
 const MIDWAY_AFTER_ORDER = Math.ceil(STOPS.length / 2);
 
 function suspectFor(stop) {
@@ -22,8 +22,9 @@ function suspectFor(stop) {
 }
 
 // Full story mode, single group, all state local (milestones 1-4 - see
-// docs/04-build-spec.md). The Supabase back end and race mode are later
-// milestones.
+// docs/04-build-spec.md). The accusation is now checked server side
+// (milestone 5 slice - see lib/bigchillSupabase.js); race mode itself is
+// still a later milestone.
 export default function BigChillApp() {
   const [phase, setPhase] = useState('start');
   const [juniorNames, setJuniorNames] = useState([]);
@@ -131,7 +132,7 @@ export default function BigChillApp() {
         <Accusation
           suspects={SUSPECTS}
           tells={TELLS}
-          culpritId={CULPRIT.id}
+          onGuess={submitAccusation}
           onCorrect={() => goTo('finale')}
           onBack={goBack}
         />
