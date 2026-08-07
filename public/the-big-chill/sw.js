@@ -5,8 +5,12 @@
 // Only caches character clips. Full offline app-shell support isn't
 // required (see docs/04-build-spec.md) - the goal is just "a hotspot blip
 // mid-video doesn't interrupt playback", which a cache-first strategy for
-// /the-big-chill/clips/* covers.
-const CACHE_NAME = 'the-big-chill-clips-v1';
+// the clips bucket covers. Clips are cross-origin (Supabase Storage), so
+// this is plain-string, not import.meta.env - a service worker file under
+// public/ isn't run through Vite's env substitution.
+const CACHE_NAME = 'the-big-chill-clips-v2';
+const CLIPS_ORIGIN = 'https://dwvsniafixisrfrszjjr.supabase.co';
+const CLIPS_PATH_PREFIX = '/storage/v1/object/public/bigchill-clips/';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -22,7 +26,7 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (!url.pathname.startsWith('/the-big-chill/clips/')) return;
+  if (url.origin !== CLIPS_ORIGIN || !url.pathname.startsWith(CLIPS_PATH_PREFIX)) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {

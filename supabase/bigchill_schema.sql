@@ -59,3 +59,15 @@ drop policy if exists "bigchill accusations read own" on public.bigchill_accusat
 create policy "bigchill accusations read own" on public.bigchill_accusations
   for select to authenticated
   using (user_id = auth.uid());
+
+-- 3. Clips storage bucket -----------------------------------------------
+-- Character video clips live here instead of the git repo, per the build
+-- spec: swap a clip by re-uploading it in the dashboard, no redeploy
+-- needed. Public bucket, so no RLS policy is needed for reads (the public
+-- flag serves objects at .../storage/v1/object/public/bigchill-clips/<file>
+-- without going through storage.objects RLS at all). Uploads happen only
+-- via the dashboard as the project owner, so no client-facing insert
+-- policy is needed either - the anon key never needs write access here.
+insert into storage.buckets (id, name, public)
+  values ('bigchill-clips', 'bigchill-clips', true)
+  on conflict (id) do nothing;

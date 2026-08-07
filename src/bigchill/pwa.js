@@ -1,6 +1,7 @@
 import { GAME_CONFIG } from './game.config.js';
+import { clipUrl } from './lib/bigchillSupabase.js';
 
-const CACHE_NAME = 'the-big-chill-clips-v1'; // keep in sync with public/the-big-chill/sw.js
+const CACHE_NAME = 'the-big-chill-clips-v2'; // keep in sync with public/the-big-chill/sw.js
 
 export function getAllClipUrls() {
   const files = new Set();
@@ -9,7 +10,7 @@ export function getAllClipUrls() {
     if (suspect.introClip?.file) files.add(suspect.introClip.file);
     suspect.questions.forEach((q) => q.answerClip?.file && files.add(q.answerClip.file));
   });
-  return [...files].map((file) => `/the-big-chill/clips/${file}`);
+  return [...files].map(clipUrl);
 }
 
 export function registerServiceWorker() {

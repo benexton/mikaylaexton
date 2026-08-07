@@ -34,9 +34,9 @@ export default function BigChillApp() {
   const [history, setHistory] = useState([]);
 
   const currentStop = STOPS[stopIndex];
-  const visitedSuspectIds = STOPS.filter(
-    (s) => completedStopIds.includes(s.id) && s.suspectId
-  ).map((s) => s.suspectId);
+  const completedStops = STOPS.filter((s) => completedStopIds.includes(s.id));
+  const visitedSuspectIds = completedStops.filter((s) => s.suspectId).map((s) => s.suspectId);
+  const progress = completedStops.length / STOPS.length;
 
   // Every forward transition snapshots the state it's leaving behind, so
   // goBack can restore it exactly - covers a whole family accidentally
@@ -100,6 +100,7 @@ export default function BigChillApp() {
         <NextStop
           stop={currentStop}
           stopsTotal={STOPS.length}
+          progress={progress}
           onArrive={() => goTo('stop')}
           onOpenCaseFile={() => setCaseFileOpen(true)}
           onBack={goBack}
@@ -111,6 +112,7 @@ export default function BigChillApp() {
           stop={currentStop}
           suspect={suspectFor(currentStop)}
           juniorNames={juniorNames}
+          progress={progress}
           onComplete={advanceAfterStop}
           onOpenCaseFile={() => setCaseFileOpen(true)}
           onBack={goBack}
@@ -149,6 +151,7 @@ export default function BigChillApp() {
           suspects={SUSPECTS}
           visitedSuspectIds={visitedSuspectIds}
           tells={TELLS}
+          completedStops={completedStops}
           onClose={() => setCaseFileOpen(false)}
         />
       )}

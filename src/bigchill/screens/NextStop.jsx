@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
 import StopMap from '../components/StopMap.jsx';
 import BackButton from '../components/BackButton.jsx';
+import HeatMeter from '../components/HeatMeter.jsx';
 import { useLiveLocation, haversineMeters } from '../geo.js';
 
 // Real street map with a live location dot and a geofenced auto-unlock.
 // The manual "I'm here" button always works regardless of GPS state -
 // coverage in the valley can drift, and a stuck geofence would ruin the
 // game (see docs/04-build-spec.md).
-export default function NextStop({ stop, stopsTotal, onArrive, onOpenCaseFile, onBack }) {
+export default function NextStop({ stop, stopsTotal, progress, onArrive, onOpenCaseFile, onBack }) {
   const { position, error } = useLiveLocation();
   const arrivedRef = useRef(false);
 
@@ -24,6 +25,7 @@ export default function NextStop({ stop, stopsTotal, onArrive, onOpenCaseFile, o
   return (
     <div className="bc-screen bc-nextstop">
       <BackButton onClick={onBack} />
+      <HeatMeter value={progress} />
       <p className="bc-kicker">
         Next stop {stop.order} of {stopsTotal}
       </p>

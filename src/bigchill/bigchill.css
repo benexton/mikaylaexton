@@ -56,6 +56,57 @@
 .bc-btn-ghost:active { transform: translateY(1px); }
 .bc-btn-small { padding: .5em .9em; font-size: .88rem; box-shadow: 0 3px 0 var(--bc-heat-deep); }
 
+/* restore-heat valve: hold-fill grows left to right via --bc-hold-progress (0-1) */
+.bc-valve-btn { position: relative; overflow: hidden; user-select: none; touch-action: none; }
+.bc-valve-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--bc-heat-deep);
+  transform: scaleX(var(--bc-hold-progress, 0));
+  transform-origin: left;
+  transition: transform .05s linear;
+}
+.bc-valve-btn span { position: relative; z-index: 1; }
+
+/* heat-themed progress meter: an actual thermometer, fixed top-right to
+   mirror .bc-back-btn's fixed top-left */
+.bc-thermometer {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 22px;
+}
+.bc-thermometer-tube {
+  width: 12px;
+  height: 90px;
+  border-radius: 6px 6px 0 0;
+  background: rgba(255,255,255,.14);
+  border: 2px solid rgba(255,255,255,.35);
+  border-bottom: none;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+.bc-thermometer-fill {
+  width: 100%;
+  height: calc(var(--bc-heat-progress, 0) * 100%);
+  background: linear-gradient(180deg, var(--bc-ember), var(--bc-heat) 60%, var(--bc-heat-deep));
+  transition: height .4s ease;
+}
+.bc-thermometer-bulb {
+  width: 22px;
+  height: 22px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--bc-heat-deep);
+  border: 2px solid rgba(255,255,255,.35);
+}
+
 /* back navigation */
 .bc-back-btn {
   position: fixed;
@@ -304,7 +355,9 @@
 }
 .bc-map { width: 100%; height: 100%; }
 
-/* case file overlay */
+/* case file overlay - 1200 to clear Leaflet's hard-coded z-index: 1000 on
+   its zoom control/attribution (see the-rodeo's rodeo.css for the same fix);
+   StopMap sits later in the DOM and would otherwise win the stacking tie */
 .bc-overlay {
   position: fixed;
   inset: 0;
@@ -312,7 +365,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  z-index: 40;
+  z-index: 1200;
   padding: 0;
 }
 .bc-overlay-panel {

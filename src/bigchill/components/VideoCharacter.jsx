@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
+import { clipUrl } from '../lib/bigchillSupabase.js';
 
-// Plays a character clip by filename from /the-big-chill/clips/. Real clips
-// don't exist yet (the family generates them via ElevenLabs + a lip-sync
-// tool - see docs/03-character-scripts.md), so a missing/erroring file falls
-// back to a captioned placeholder card instead of a broken player. Once real
-// MP4s land at that path, playback just starts working - no code change.
+// Plays a character clip by filename from the bigchill-clips Supabase
+// Storage bucket. Real clips don't exist yet (the family generates them via
+// ElevenLabs + a lip-sync tool - see docs/03-character-scripts.md), so a
+// missing/erroring file falls back to a captioned placeholder card instead
+// of a broken player. Once real MP4s land in the bucket, playback just
+// starts working - no code change.
 //
 // Under `vite dev`, a missing clip path 200s back index.html (SPA fallback)
 // instead of 404ing, so the <video> never fires `error`. A load timeout
-// catches that case too, not just genuine network errors.
+// catches that case too, not just genuine network errors. That path doesn't
+// apply once clips are cross-origin (Storage 404s properly), but the
+// timeout is harmless to keep as a backstop.
 export default function VideoCharacter({ clip, name, role, onDone, autoPlay = false }) {
   const [mode, setMode] = useState(autoPlay ? 'playing' : 'idle');
   const videoRef = useRef(null);
@@ -21,7 +25,7 @@ export default function VideoCharacter({ clip, name, role, onDone, autoPlay = fa
   }, [mode]);
 
   if (!clip) return null;
-  const src = `/the-big-chill/clips/${clip.file}`;
+  const src = clipUrl(clip.file);
   const initials = (clip.character || name || '?')
     .split(' ')
     .map((w) => w[0])
@@ -62,6 +66,7 @@ export default function VideoCharacter({ clip, name, role, onDone, autoPlay = fa
             ref={videoRef}
             className="bc-video-el"
             src={src}
+            crossOrigin="anonymous"
             autoPlay
             playsInline
             controls={false}

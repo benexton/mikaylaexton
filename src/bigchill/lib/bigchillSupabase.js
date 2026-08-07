@@ -23,6 +23,15 @@ export const bigchill = createClient(url ?? '', anonKey ?? '', {
   },
 });
 
+// Character clips live in a public Storage bucket, not the git repo - swap a
+// clip by re-uploading it in the dashboard, no redeploy needed. Upload real
+// MP4s here with filenames matching game.config.js's `file` values exactly.
+const CLIPS_BUCKET = 'bigchill-clips';
+
+export function clipUrl(filename) {
+  return `${url ?? ''}/storage/v1/object/public/${CLIPS_BUCKET}/${filename}`;
+}
+
 // There's no login screen - every device is just "a player" via Supabase's
 // anonymous auth, reused across the session once signed in. Safe to call
 // repeatedly.

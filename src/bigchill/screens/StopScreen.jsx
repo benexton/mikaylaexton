@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import VideoCharacter from '../components/VideoCharacter.jsx';
 import BackButton from '../components/BackButton.jsx';
+import HeatMeter from '../components/HeatMeter.jsx';
 
 // One stop, end to end: optional suspect video + interrogation, the group
 // puzzle, the separate Junior Detective strip, then the evidence recap.
 // Reused for all six stops - stop 1 has no suspect, so those sections just
 // don't render.
-export default function StopScreen({ stop, suspect, juniorNames, onComplete, onOpenCaseFile, onBack }) {
+export default function StopScreen({ stop, suspect, juniorNames, progress, onComplete, onOpenCaseFile, onBack }) {
   const [suspectSeen, setSuspectSeen] = useState(!stop.suspectId);
   const [activeQuestionId, setActiveQuestionId] = useState(null);
   const [askedQuestionIds, setAskedQuestionIds] = useState([]);
@@ -62,6 +63,7 @@ export default function StopScreen({ stop, suspect, juniorNames, onComplete, onO
   return (
     <div className="bc-screen bc-stop">
       <BackButton onClick={handleBack} />
+      <HeatMeter value={progress} />
 
       <div className="bc-stop-header">
         <p className="bc-kicker">Stop {stop.order}</p>
