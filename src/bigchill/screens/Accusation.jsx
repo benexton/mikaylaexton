@@ -1,15 +1,22 @@
 import { useState } from 'react';
 import BackButton from '../components/BackButton.jsx';
 
+const FLASH_MS = 1800;
+
 // The deduction finale. A wrong guess in story mode is handled gently -
 // "look again" - rather than penalised (race mode's timer penalty is a
 // later milestone). The culprit id is checked server side via onGuess (see
 // bigchillSupabase.js's submitAccusation) - it's never compared in this
 // component, so it's never in the client bundle either.
-export default function Accusation({ suspects, tells, onGuess, onCorrect, onBack }) {
+//
+// No summary of evidence lives on this screen any more - the case file
+// (numbers + the group's own notes from every interview) is the single
+// source of truth, opened from here the same way it's opened mid-stop.
+export default function Accusation({ suspects, onGuess, onCorrect, onOpenCaseFile, onBack }) {
   const [wrongName, setWrongName] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [flash, setFlash] = useState(null); // null | 'wrong'
 
   async function accuse(suspect) {
     if (busy) return;
@@ -22,6 +29,8 @@ export default function Accusation({ suspects, tells, onGuess, onCorrect, onBack
         onCorrect();
       } else {
         setWrongName(suspect.name);
+        setFlash('wrong');
+        setTimeout(() => setFlash(null), FLASH_MS);
       }
     } catch (err) {
       setError(err.message || 'Could not check that guess. Try again.');
@@ -31,37 +40,21 @@ export default function Accusation({ suspects, tells, onGuess, onCorrect, onBack
 
   return (
     <div className="bc-screen bc-stop bc-accusation">
+      {flash && <div className={`bc-answer-flash bc-answer-flash-${flash}`} />}
       <BackButton onClick={onBack} />
       <div className="bc-stop-header">
         <p className="bc-kicker">The accusation</p>
         <h2 className="bc-startgate-title">Who stole the heat?</h2>
+        {onOpenCaseFile && (
+          <button className="bc-btn bc-btn-ghost bc-btn-small" onClick={onOpenCaseFile}>
+            Case file
+          </button>
+        )}
       </div>
 
-      <div className="bc-card">
-        <h3>The case board</h3>
-        <div className="bc-case-table-wrap">
-          <table className="bc-case-table">
-            <thead>
-              <tr>
-                <th></th>
-                {suspects.map((s) => (
-                  <th key={s.id}>{s.name.split(' ')[0]}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {tells.map((tell) => (
-                <tr key={tell.id}>
-                  <th>{tell.label}</th>
-                  {suspects.map((s) => (
-                    <td key={s.id}>{s.traits[tell.id] ? '✓' : '✗'}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <p className="bc-startgate-sub">
+        Check every number and note you gathered before you make the call.
+      </p>
 
       {error && (
         <div className="bc-card bc-wrong-card">

@@ -15,6 +15,7 @@ import { clipUrl } from '../lib/bigchillSupabase.js';
 // timeout is harmless to keep as a backstop.
 export default function VideoCharacter({ clip, name, role, onDone, autoPlay = false }) {
   const [mode, setMode] = useState(autoPlay ? 'playing' : 'idle');
+  const [paused, setPaused] = useState(false);
   const videoRef = useRef(null);
   const loadTimeoutRef = useRef(null);
 
@@ -36,9 +37,11 @@ export default function VideoCharacter({ clip, name, role, onDone, autoPlay = fa
 
   function play() {
     setMode('playing');
+    setPaused(false);
   }
 
   function handleEnded() {
+    videoRef.current?.pause();
     setMode('done');
     onDone?.();
   }
@@ -49,6 +52,18 @@ export default function VideoCharacter({ clip, name, role, onDone, autoPlay = fa
 
   function handleLoaded() {
     clearTimeout(loadTimeoutRef.current);
+  }
+
+  function restart() {
+    if (!videoRef.current) return;
+    videoRef.current.currentTime = 0;
+    videoRef.current.play();
+  }
+
+  function togglePause() {
+    if (!videoRef.current) return;
+    if (videoRef.current.paused) videoRef.current.play();
+    else videoRef.current.pause();
   }
 
   return (
@@ -73,6 +88,8 @@ export default function VideoCharacter({ clip, name, role, onDone, autoPlay = fa
             onEnded={handleEnded}
             onError={handleError}
             onLoadedData={handleLoaded}
+            onPlay={() => setPaused(false)}
+            onPause={() => setPaused(true)}
           />
         )}
 
@@ -83,6 +100,24 @@ export default function VideoCharacter({ clip, name, role, onDone, autoPlay = fa
           </div>
         )}
       </div>
+
+      {mode === 'playing' && (
+        <div className="bc-video-controls">
+          <button className="bc-btn bc-btn-ghost bc-btn-small" onClick={restart} aria-label="Restart clip">
+            &#9198; Restart
+          </button>
+          <button
+            className="bc-btn bc-btn-ghost bc-btn-small"
+            onClick={togglePause}
+            aria-label={paused ? 'Resume clip' : 'Pause clip'}
+          >
+            {paused ? <>&#9658; Play</> : <>&#10074;&#10074; Pause</>}
+          </button>
+          <button className="bc-btn bc-btn-ghost bc-btn-small" onClick={handleEnded} aria-label="Skip clip">
+            Skip &#9197;
+          </button>
+        </div>
+      )}
 
       <div className="bc-caption-box">
         <p className="bc-caption-name">{clip.character || name}</p>

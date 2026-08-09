@@ -10,7 +10,7 @@ import Finale from './screens/Finale.jsx';
 import Certificate from './screens/Certificate.jsx';
 import VideoCharacter from './components/VideoCharacter.jsx';
 import BackButton from './components/BackButton.jsx';
-import { GAME_CONFIG, TELLS, NARRATOR_CLIPS } from './game.config.js';
+import { GAME_CONFIG, NARRATOR_CLIPS } from './game.config.js';
 import { submitAccusation } from './lib/bigchillSupabase.js';
 
 const STOPS = GAME_CONFIG.stops;
@@ -31,11 +31,36 @@ export default function BigChillApp() {
   const [stopIndex, setStopIndex] = useState(0);
   const [completedStopIds, setCompletedStopIds] = useState([]);
   const [caseFileOpen, setCaseFileOpen] = useState(false);
+  const [caseFileHighlightId, setCaseFileHighlightId] = useState(null);
+  const [stopNotes, setStopNotes] = useState({});
   const [history, setHistory] = useState([]);
+
+  function updateStopNote(stopId, text) {
+    setStopNotes((notes) => ({ ...notes, [stopId]: text }));
+  }
+
+  // The moment a group finishes an interview is the best time to get them
+  // writing notes down, so instead of advancing straight to the next stop
+  // this marks the stop complete right away (so its number/notes field
+  // shows up in the case file immediately) and opens the case file on that
+  // stop's notes field - the phase transition itself is deferred until
+  // they close it (see closeCaseFile).
+  function finishStopInterview() {
+    setCompletedStopIds((ids) => (ids.includes(currentStop.id) ? ids : [...ids, currentStop.id]));
+    setCaseFileHighlightId(currentStop.id);
+    setCaseFileOpen(true);
+  }
+
+  function closeCaseFile() {
+    setCaseFileOpen(false);
+    if (caseFileHighlightId) {
+      setCaseFileHighlightId(null);
+      advanceAfterStop();
+    }
+  }
 
   const currentStop = STOPS[stopIndex];
   const completedStops = STOPS.filter((s) => completedStopIds.includes(s.id));
-  const visitedSuspectIds = completedStops.filter((s) => s.suspectId).map((s) => s.suspectId);
   const progress = completedStops.length / STOPS.length;
 
   // Every forward transition snapshots the state it's leaving behind, so
@@ -59,21 +84,22 @@ export default function BigChillApp() {
     setCompletedStopIds(prev.completedStopIds);
   }
 
+  // completedStopIds already has this stop by the time this runs -
+  // finishStopInterview adds it before the case file even opens - so this
+  // is purely a phase transition, no state patch to compute.
   function advanceAfterStop() {
-    const nextCompleted = [...completedStopIds, currentStop.id];
     if (currentStop.order === MIDWAY_AFTER_ORDER && NARRATOR_CLIPS.chiefMidway) {
-      goTo('midway', { completedStopIds: nextCompleted });
+      goTo('midway');
     } else {
-      goToNext(nextCompleted);
+      goToNext();
     }
   }
 
-  function goToNext(completedOverride) {
-    const nextCompleted = completedOverride ?? completedStopIds;
+  function goToNext() {
     if (stopIndex + 1 < STOPS.length) {
-      goTo('nextStop', { completedStopIds: nextCompleted, stopIndex: stopIndex + 1 });
+      goTo('nextStop', { stopIndex: stopIndex + 1 });
     } else {
-      goTo('accusation', { completedStopIds: nextCompleted });
+      goTo('accusation');
     }
   }
 
@@ -84,6 +110,8 @@ export default function BigChillApp() {
     setStopIndex(0);
     setCompletedStopIds([]);
     setCaseFileOpen(false);
+    setCaseFileHighlightId(null);
+    setStopNotes({});
   }
 
   return (
@@ -113,7 +141,7 @@ export default function BigChillApp() {
           suspect={suspectFor(currentStop)}
           juniorNames={juniorNames}
           progress={progress}
-          onComplete={advanceAfterStop}
+          onComplete={finishStopInterview}
           onOpenCaseFile={() => setCaseFileOpen(true)}
           onBack={goBack}
         />
@@ -133,9 +161,9 @@ export default function BigChillApp() {
       {phase === 'accusation' && (
         <Accusation
           suspects={SUSPECTS}
-          tells={TELLS}
           onGuess={submitAccusation}
           onCorrect={() => goTo('finale')}
+          onOpenCaseFile={() => setCaseFileOpen(true)}
           onBack={goBack}
         />
       )}
@@ -148,11 +176,13 @@ export default function BigChillApp() {
 
       {caseFileOpen && (
         <CaseFile
+          stops={STOPS}
           suspects={SUSPECTS}
-          visitedSuspectIds={visitedSuspectIds}
-          tells={TELLS}
-          completedStops={completedStops}
-          onClose={() => setCaseFileOpen(false)}
+          completedStopIds={completedStopIds}
+          notes={stopNotes}
+          onNoteChange={updateStopNote}
+          onClose={closeCaseFile}
+          highlightStopId={caseFileHighlightId}
         />
       )}
     </div>

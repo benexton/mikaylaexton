@@ -2,20 +2,32 @@ import { useState } from 'react';
 import VideoCharacter from '../components/VideoCharacter.jsx';
 import BackButton from '../components/BackButton.jsx';
 import HeatMeter from '../components/HeatMeter.jsx';
+import PuzzleView from '../components/puzzles/PuzzleView.jsx';
+import JuniorPuzzleView from '../components/puzzles/JuniorPuzzleView.jsx';
+
+// Puzzle types whose answer is a typed digit code rather than something
+// solved by direct interaction - these don't self-report solved any more,
+// StopScreen checks the typed guess centrally when the group hits Check.
+const DIGIT_ANSWER_TYPES = ['image', 'riddle', 'numberCipher'];
+const FLASH_MS = 1800;
+
+function normalizeDigits(s) {
+  return s.trim().replace(/^-/, '');
+}
 
 // One stop, end to end: optional suspect video + interrogation, the group
 // puzzle, the separate Junior Detective strip, then the evidence recap.
-// Reused for all six stops - stop 1 has no suspect, so those sections just
-// don't render.
 export default function StopScreen({ stop, suspect, juniorNames, progress, onComplete, onOpenCaseFile, onBack }) {
   const [suspectSeen, setSuspectSeen] = useState(!stop.suspectId);
   const [activeQuestionId, setActiveQuestionId] = useState(null);
   const [askedQuestionIds, setAskedQuestionIds] = useState([]);
   const [hintIndex, setHintIndex] = useState(-1);
   const [puzzleSolved, setPuzzleSolved] = useState(false);
+  const [mainGuess, setMainGuess] = useState('');
   const [juniorDone, setJuniorDone] = useState(false);
-  const [juniorCount, setJuniorCount] = useState('');
+  const [unlocked, setUnlocked] = useState(false);
   const [showEvidence, setShowEvidence] = useState(false);
+  const [flash, setFlash] = useState(null); // null | 'correct' | 'wrong'
 
   function handleBack() {
     if (showEvidence) {
@@ -47,8 +59,8 @@ export default function StopScreen({ stop, suspect, juniorNames, progress, onCom
       <div className="bc-screen bc-stop">
         <BackButton onClick={handleBack} />
         <div className="bc-card bc-evidence-card">
-          <h3>Case file updated</h3>
-          <p>{stop.evidenceLabel}</p>
+          <h3>Interview complete</h3>
+          <p>You&rsquo;ve finished your interview with {suspect?.name}. Time to move on to the next spot.</p>
         </div>
         <button className="bc-btn bc-btn-primary" onClick={onComplete}>
           Continue
@@ -59,16 +71,39 @@ export default function StopScreen({ stop, suspect, juniorNames, progress, onCom
 
   const activeQuestion = suspect?.questions.find((q) => q.id === activeQuestionId);
   const hasJuniors = juniorNames && juniorNames.length > 0;
+  const isDigitAnswer = DIGIT_ANSWER_TYPES.includes(stop.puzzle.type);
+  const mainPuzzleCorrect = isDigitAnswer
+    ? normalizeDigits(mainGuess) === normalizeDigits(stop.puzzle.data.answer)
+    : puzzleSolved;
+
+  // Below unlocked, the bottom button checks everything at once - the main
+  // puzzle plus the junior puzzle if one is in play - and flashes the whole
+  // screen green or red rather than silently gating a disabled button. A
+  // correct check is also the moment the interrogation questions unlock, not
+  // something that happens later after the interview. Once unlocked, the
+  // same button just moves the group on to the evidence card.
+  function handleBottomButtonClick() {
+    if (unlocked) {
+      setShowEvidence(true);
+      return;
+    }
+    const complete = mainPuzzleCorrect && (!hasJuniors || juniorDone);
+    setFlash(complete ? 'correct' : 'wrong');
+    setTimeout(() => {
+      setFlash(null);
+      if (complete) setUnlocked(true);
+    }, FLASH_MS);
+  }
 
   return (
     <div className="bc-screen bc-stop">
+      {flash && <div className={`bc-answer-flash bc-answer-flash-${flash}`} />}
       <BackButton onClick={handleBack} />
       <HeatMeter value={progress} />
 
       <div className="bc-stop-header">
         <p className="bc-kicker">Stop {stop.order}</p>
         <h2 className="bc-stop-title">{stop.title}</h2>
-        <p className="bc-stop-location">{stop.locationLabel}</p>
         {onOpenCaseFile && (
           <button className="bc-btn bc-btn-ghost bc-btn-small" onClick={onOpenCaseFile}>
             Case file
@@ -79,17 +114,24 @@ export default function StopScreen({ stop, suspect, juniorNames, progress, onCom
       {suspect && (
         <div className="bc-card">
           <h3>Interrogate {suspect.name}</h3>
-          {activeQuestion ? (
-            <VideoCharacter
-              clip={activeQuestion.answerClip}
-              name={suspect.name}
-              onDone={() => {
-                setAskedQuestionIds((ids) =>
-                  ids.includes(activeQuestion.id) ? ids : [...ids, activeQuestion.id]
-                );
-                setActiveQuestionId(null);
-              }}
-            />
+          {!unlocked ? (
+            <p className="bc-stop-location">
+              Solve the puzzle{hasJuniors ? 's' : ''} below to unlock your questions.
+            </p>
+          ) : activeQuestion ? (
+            <>
+              <p className="bc-active-question">{activeQuestion.prompt}</p>
+              <VideoCharacter
+                clip={activeQuestion.answerClip}
+                name={suspect.name}
+                onDone={() => {
+                  setAskedQuestionIds((ids) =>
+                    ids.includes(activeQuestion.id) ? ids : [...ids, activeQuestion.id]
+                  );
+                  setActiveQuestionId(null);
+                }}
+              />
+            </>
           ) : (
             <div className="bc-question-list">
               {suspect.questions.map((q) => (
@@ -107,57 +149,42 @@ export default function StopScreen({ stop, suspect, juniorNames, progress, onCom
         </div>
       )}
 
-      <div className="bc-card">
-        <h3>The puzzle</h3>
-        <p>{stop.puzzle.prompt}</p>
-        {hintIndex >= 0 && (
-          <ul className="bc-hint-list">
-            {stop.puzzle.hints.slice(0, hintIndex + 1).map((hint, i) => (
-              <li key={i}>{hint}</li>
-            ))}
-          </ul>
-        )}
-        <div className="bc-junior-actions">
+      {!unlocked && (
+        <div className="bc-card">
+          <h3>The puzzle</h3>
+          <p>{stop.puzzle.prompt}</p>
+          {hintIndex >= 0 && (
+            <ul className="bc-hint-list">
+              {stop.puzzle.hints.slice(0, hintIndex + 1).map((hint, i) => (
+                <li key={i}>{hint}</li>
+              ))}
+            </ul>
+          )}
           {hintIndex + 1 < stop.puzzle.hints.length && (
-            <button
-              className="bc-btn bc-btn-ghost bc-btn-small"
-              onClick={() => setHintIndex((i) => i + 1)}
-            >
+            <button className="bc-btn bc-btn-ghost bc-btn-small" onClick={() => setHintIndex((i) => i + 1)}>
               Need a hint?
             </button>
           )}
-          {!puzzleSolved && (
-            <button className="bc-btn bc-btn-small" onClick={() => setPuzzleSolved(true)}>
-              Found it
-            </button>
-          )}
-          {puzzleSolved && <span className="bc-kicker">Solved</span>}
+          <PuzzleView
+            puzzle={stop.puzzle}
+            onSolved={() => setPuzzleSolved(true)}
+            guess={mainGuess}
+            onGuessChange={setMainGuess}
+          />
         </div>
-      </div>
+      )}
 
       {hasJuniors && (
         <div className="bc-junior-strip">
           <span className="bc-junior-badge">
             Junior Detective{juniorNames.length > 1 ? 's' : ''}: {juniorNames.join(', ')}
           </span>
-          <p>{stop.juniorTask.prompt}</p>
-          {stop.juniorTask.type === 'count' && !juniorDone && (
-            <input
-              type="number"
-              inputMode="numeric"
-              min="0"
-              value={juniorCount}
-              onChange={(e) => setJuniorCount(e.target.value)}
-              placeholder="How many?"
-            />
+          <p>{stop.juniorPuzzle.prompt}</p>
+          {!juniorDone && (
+            <JuniorPuzzleView puzzle={stop.juniorPuzzle} onSolved={() => setJuniorDone(true)} />
           )}
           <div className="bc-junior-actions">
-            {!juniorDone && (
-              <button className="bc-btn bc-btn-small" onClick={() => setJuniorDone(true)}>
-                {stop.juniorTask.type === 'count' ? 'Submit' : 'Spotted it!'}
-              </button>
-            )}
-            {!juniorDone && stop.juniorTask.skippable && (
+            {!juniorDone && stop.juniorPuzzle.skippable !== false && (
               <button className="bc-btn bc-btn-ghost bc-btn-small" onClick={() => setJuniorDone(true)}>
                 Skip
               </button>
@@ -167,8 +194,8 @@ export default function StopScreen({ stop, suspect, juniorNames, progress, onCom
         </div>
       )}
 
-      <button className="bc-btn bc-btn-primary" disabled={!puzzleSolved} onClick={() => setShowEvidence(true)}>
-        Continue
+      <button className="bc-btn bc-btn-primary" onClick={handleBottomButtonClick}>
+        {unlocked ? 'Continue' : 'Check'}
       </button>
     </div>
   );

@@ -30,7 +30,6 @@ export default function NextStop({ stop, stopsTotal, progress, onArrive, onOpenC
         Next stop {stop.order} of {stopsTotal}
       </p>
       <h2 className="bc-startgate-title">{stop.title}</h2>
-      <p className="bc-startgate-sub">{stop.locationLabel}</p>
 
       <StopMap stop={stop} userPosition={position} />
 

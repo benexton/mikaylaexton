@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import VideoCharacter from '../components/VideoCharacter.jsx';
 import BackButton from '../components/BackButton.jsx';
-import RestoreGesture from '../components/RestoreGesture.jsx';
+import HeatLock from '../components/HeatLock.jsx';
 import { NARRATOR_CLIPS } from '../game.config.js';
 
-// Real restore gesture (press and hold, then blow into the mic or shake -
-// see RestoreGesture.jsx), then chiefFinale and the optional barty_caught
-// clip, then handoff to the certificate.
+// The heat-restoring combination lock (see HeatLock.jsx), then chiefFinale
+// and the barty_caught clip (prison bars drop partway through, see CSS),
+// then handoff to the certificate.
 export default function Finale({ onDone, onBack }) {
-  const [stage, setStage] = useState('restore'); // restore | chief | caught
+  const [stage, setStage] = useState('lock'); // lock | chief | caught
 
-  if (stage === 'restore') {
+  if (stage === 'lock') {
     return (
       <div className="bc-screen bc-stop">
-        <RestoreGesture onComplete={() => setStage('chief')} onBack={onBack} />
+        <HeatLock onComplete={() => setStage('chief')} onBack={onBack} />
       </div>
     );
   }
@@ -21,7 +21,7 @@ export default function Finale({ onDone, onBack }) {
   if (stage === 'chief') {
     return (
       <div className="bc-screen bc-stop">
-        <BackButton onClick={() => setStage('restore')} />
+        <BackButton onClick={() => setStage('lock')} />
         <VideoCharacter
           key={NARRATOR_CLIPS.chiefFinale.file}
           clip={NARRATOR_CLIPS.chiefFinale}
@@ -34,7 +34,13 @@ export default function Finale({ onDone, onBack }) {
   return (
     <div className="bc-screen bc-stop">
       <BackButton onClick={() => setStage('chief')} />
-      <VideoCharacter key={NARRATOR_CLIPS.bartyCaught.file} clip={NARRATOR_CLIPS.bartyCaught} onDone={onDone} />
+      <div className="bc-prison-bars" aria-hidden="true" />
+      <VideoCharacter
+        key={NARRATOR_CLIPS.bartyCaught.file}
+        clip={NARRATOR_CLIPS.bartyCaught}
+        onDone={onDone}
+        autoPlay
+      />
     </div>
   );
 }

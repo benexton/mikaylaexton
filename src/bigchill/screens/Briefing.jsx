@@ -3,10 +3,10 @@ import VideoCharacter from '../components/VideoCharacter.jsx';
 import BackButton from '../components/BackButton.jsx';
 import { NARRATOR_CLIPS } from '../game.config.js';
 
-// chiefIntro -> junior detective names (zero or more, added one at a time)
-// -> thiefTaunt -> hand off to stop 1.
+// chiefIntro -> premise ("how this works") -> junior detective names (zero
+// or more, added one at a time) -> thiefTaunt -> hand off to stop 1.
 export default function Briefing({ onComplete, onBack }) {
-  const [stage, setStage] = useState('intro'); // intro | names | taunt
+  const [stage, setStage] = useState('intro'); // intro | premise | names | taunt
   const [names, setNames] = useState([]);
   const [draft, setDraft] = useState('');
 
@@ -23,13 +23,39 @@ export default function Briefing({ onComplete, onBack }) {
   }
 
   const backHandler =
-    stage === 'intro' ? onBack : stage === 'names' ? () => setStage('intro') : () => setStage('names');
+    stage === 'intro'
+      ? onBack
+      : stage === 'premise'
+      ? () => setStage('intro')
+      : stage === 'names'
+      ? () => setStage('premise')
+      : () => setStage('names');
 
   return (
     <div className="bc-screen bc-briefing">
       <BackButton onClick={backHandler} />
 
-      {stage === 'intro' && <VideoCharacter clip={NARRATOR_CLIPS.chiefIntro} onDone={() => setStage('names')} />}
+      {stage === 'intro' && <VideoCharacter clip={NARRATOR_CLIPS.chiefIntro} onDone={() => setStage('premise')} />}
+
+      {stage === 'premise' && (
+        <div className="bc-briefing-premise">
+          <div className="bc-stop-header">
+            <p className="bc-kicker">The journey</p>
+            <h2 className="bc-stop-title">How this works</h2>
+          </div>
+          <div className="bc-card">
+            <ul className="bc-hint-list">
+              <li>Suspects are scattered all around Hanmer Springs.</li>
+              <li>Solve the puzzle at each stop first - that earns you the right to sit down and interrogate them.</li>
+              <li>Every puzzle also uncovers a number - keep them all safe in your case file, you will need every one to turn the heat back on.</li>
+              <li>Once you have spoken to everyone, use what you have gathered to make your final accusation.</li>
+            </ul>
+          </div>
+          <button className="bc-btn bc-btn-primary" onClick={() => setStage('names')}>
+            Got it - let&rsquo;s go
+          </button>
+        </div>
+      )}
 
       {stage === 'names' && (
         <div className="bc-briefing-names">

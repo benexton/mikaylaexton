@@ -42,6 +42,10 @@
   cursor: pointer;
   box-shadow: 0 4px 0 var(--bc-heat-deep);
   transition: transform .08s, box-shadow .08s;
+  /* iOS Safari can otherwise wait ~300ms per tap to rule out a double-tap
+     zoom gesture, or occasionally double-fire - this removes both risks
+     on every button in the app, not just BackButton's own debounce. */
+  touch-action: manipulation;
 }
 .bc-btn:hover { filter: brightness(1.05); }
 .bc-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--bc-heat-deep); }
@@ -122,6 +126,7 @@
   font-weight: 700;
   font-size: .86rem;
   cursor: pointer;
+  touch-action: manipulation;
 }
 .bc-back-btn:active { transform: translateY(1px); }
 
@@ -174,6 +179,8 @@
 }
 .bc-briefing-field input::placeholder { color: rgba(255,255,255,.45); }
 .bc-briefing-field input:focus { outline: none; border-color: var(--bc-heat); }
+
+.bc-briefing-premise { width: 100%; display: flex; flex-direction: column; gap: 16px; text-align: left; }
 
 .bc-briefing-names { width: 100%; display: flex; flex-direction: column; gap: 14px; text-align: left; }
 .bc-briefing-names-label { font-weight: 700; font-size: .92rem; color: var(--bc-ice); margin: 0; }
@@ -256,6 +263,9 @@
 .bc-video-placeholder { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--bc-ice); }
 .bc-video-placeholder-note { font-size: .85rem; margin: 0; }
 
+.bc-video-controls { display: flex; gap: 8px; justify-content: center; }
+.bc-video-controls .bc-btn { flex: 1; }
+
 .bc-caption-box { text-align: left; }
 .bc-caption-name {
   font-family: var(--bc-disp);
@@ -271,6 +281,15 @@
 .bc-stop-header { text-align: center; }
 .bc-stop-title { font-size: 1.6rem; color: #fff; }
 .bc-stop-location { color: var(--bc-ice); font-size: .92rem; margin: 0; }
+.bc-active-question {
+  margin: 0;
+  font-weight: 700;
+  color: var(--bc-ember);
+  font-size: .95rem;
+  background: rgba(0,0,0,.15);
+  border-radius: 10px;
+  padding: .6em .8em;
+}
 
 .bc-progress-meter {
   width: 100%;
@@ -306,6 +325,358 @@
   border-radius: 10px;
   padding: .6em .8em;
 }
+
+/* interactive puzzles */
+.bc-puzzle { display: flex; flex-direction: column; gap: 12px; }
+
+/* full-screen hidden-object / counting scenes */
+.bc-scene-launch {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  border: 2px dashed var(--bc-heat);
+  border-radius: 14px;
+  padding: 16px;
+  background: rgba(255,138,61,.08);
+  color: var(--bc-paper);
+  font-family: var(--bc-sans);
+  font-weight: 700;
+  font-size: .92rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.bc-scene-launch-icon { font-size: 1.3rem; }
+
+.bc-scene-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background: var(--bc-frost-deep);
+  overflow-y: auto;
+  padding: max(60px, calc(env(safe-area-inset-top) + 50px)) 16px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.bc-scene-close {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  z-index: 1310;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.1);
+  color: var(--bc-paper);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.bc-scene-status { margin: 0; color: var(--bc-ice); font-weight: 700; font-size: .92rem; text-align: center; }
+
+.bc-dense-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: 4px;
+  width: 100%;
+  max-width: 640px;
+}
+.bc-dense-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  border-radius: 6px;
+}
+button.bc-dense-cell {
+  /* deliberately identical to the non-interactive decoy spans until found -
+     any visual tell here (background, border) would leak which cells are
+     real targets before the player has actually spotted the icon */
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.bc-dense-cell-found { background: rgba(63,166,107,.35); }
+.bc-dense-cell-decoy { opacity: .92; }
+
+.bc-count-form { display: flex; gap: 10px; }
+.bc-count-form input {
+  flex: 1;
+  font-family: var(--bc-sans);
+  font-size: 1rem;
+  padding: .7em .9em;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.15);
+  color: var(--bc-paper);
+}
+.bc-count-form input:focus { outline: none; border-color: var(--bc-heat); }
+.bc-puzzle-status-wrong { margin: 0; color: var(--bc-heat); font-size: .88rem; font-weight: 700; }
+
+/* pigpen cipher */
+.bc-cipher-message {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 10px;
+  background: var(--bc-paper);
+  color: var(--bc-ink);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: var(--bc-shadow);
+}
+.bc-cipher-word { display: flex; gap: 4px; }
+.bc-pigpen-glyph { color: var(--bc-ink); flex-shrink: 0; }
+
+.bc-cipher-legend { color: var(--bc-ice); }
+.bc-cipher-legend summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: .88rem;
+  color: var(--bc-ember);
+  touch-action: manipulation;
+}
+.bc-cipher-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  background: var(--bc-paper);
+  border-radius: 12px;
+  padding: 12px;
+}
+.bc-cipher-legend-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--bc-ink);
+  font-size: .72rem;
+  font-weight: 700;
+}
+.bc-cipher-legend-cell .bc-pigpen-glyph { color: var(--bc-ink); }
+
+/* PDF rebus / riddle / number-cipher puzzles */
+.bc-puzzle-image {
+  width: 100%;
+  border-radius: 14px;
+  box-shadow: var(--bc-shadow);
+  background: var(--bc-paper);
+  display: block;
+}
+
+.bc-riddle-text {
+  white-space: pre-line;
+  font-style: italic;
+  color: var(--bc-paper);
+  background: rgba(0,0,0,.15);
+  border-radius: 12px;
+  padding: 16px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.bc-digit-input {
+  width: 100%;
+  font-family: var(--bc-sans);
+  font-size: 1rem;
+  padding: .7em .9em;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.15);
+  color: var(--bc-paper);
+}
+.bc-digit-input:focus { outline: none; border-color: var(--bc-heat); }
+
+.bc-answer-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+  animation: bc-answer-flash-anim 1.8s ease-out;
+}
+.bc-answer-flash-correct { background: var(--bc-good); }
+.bc-answer-flash-wrong { background: var(--bc-heat-deep); }
+@keyframes bc-answer-flash-anim {
+  0% { opacity: .6; }
+  70% { opacity: .5; }
+  100% { opacity: 0; }
+}
+
+/* Barty's confession: theatrical prison bars slam down over the whole
+   screen while he talks - vertical bars with gaps so the clip still shows
+   through, like he's being watched from behind them. */
+.bc-prison-bars {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(15, 12, 10, .94) 0px,
+    rgba(15, 12, 10, .94) 16px,
+    transparent 16px,
+    transparent 64px
+  );
+  box-shadow: inset 0 0 80px rgba(0, 0, 0, .6);
+  transform: translateY(-105%);
+  animation: bc-prison-bars-drop .7s cubic-bezier(.32, 1.5, .5, 1) 2s forwards;
+}
+@keyframes bc-prison-bars-drop {
+  to { transform: translateY(0); }
+}
+
+.bc-match-grid { display: flex; gap: 10px; }
+.bc-match-col { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.bc-match-btn {
+  font-family: var(--bc-sans);
+  font-weight: 700;
+  font-size: .95rem;
+  padding: .7em .6em;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.15);
+  color: var(--bc-paper);
+  cursor: pointer;
+}
+.bc-match-label { font-size: .82rem; font-weight: 600; text-align: left; }
+.bc-match-selected { border-color: var(--bc-heat); background: rgba(255,138,61,.18); }
+.bc-match-done { border-color: var(--bc-good); background: rgba(63,166,107,.18); opacity: .7; cursor: default; }
+.bc-match-wrong { border-color: #e5622b; animation: bc-match-shake .3s; }
+@keyframes bc-match-shake {
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+/* junior drag-and-drop puzzles (ShapeDragPuzzle, JuniorMatchPuzzle) */
+.bc-drag-board { display: flex; flex-direction: column; gap: 16px; }
+.bc-drag-slots { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.bc-drag-slot {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(0,0,0,.15);
+}
+.bc-drag-slot-outline { border: 3px dashed rgba(255,255,255,.4); }
+.bc-drag-slot-icon-target { border: 1.5px solid rgba(255,255,255,.25); }
+.bc-drag-slot-filled { border-style: solid; border-color: var(--bc-good); background: rgba(63,166,107,.18); }
+.bc-drag-slot-icon { font-size: 1.8rem; }
+.bc-drag-slot-label {
+  font-size: .6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--bc-ice);
+  text-align: center;
+}
+/* outline slots have no icon hint any more - the word is the only content,
+   so it needs to read clearly rather than sit as a small caption */
+.bc-drag-slot-outline .bc-drag-slot-label {
+  font-size: .85rem;
+  color: var(--bc-paper);
+  padding: 0 4px;
+}
+.bc-drag-slot-token {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.1rem;
+  background: var(--bc-frost-deep);
+  border-radius: 13px;
+}
+
+.bc-drag-tray { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; min-height: 64px; }
+.bc-drag-token {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  padding: 0;
+  cursor: grab;
+  touch-action: none;
+}
+.bc-drag-token-hidden { visibility: hidden; }
+.bc-drag-token-ghost { cursor: grabbing; box-shadow: var(--bc-shadow); z-index: 1400; background: var(--bc-frost-deep); }
+.bc-drag-icon { pointer-events: none; }
+
+/* junior pipe maze (PipeMazePuzzle) */
+.bc-pipe-maze { display: flex; justify-content: center; }
+.bc-pipe-maze-svg {
+  width: 100%;
+  max-width: 260px;
+  background: var(--bc-paper);
+  border-radius: 16px;
+  box-shadow: var(--bc-shadow);
+  touch-action: none;
+}
+.bc-pipe-outline { fill: none; stroke: #4a4d55; stroke-linecap: round; stroke-linejoin: round; }
+.bc-pipe-fill { fill: none; stroke: #c9ccd1; stroke-linecap: round; stroke-linejoin: round; }
+.bc-pipe-joint { fill: #4a4d55; }
+.bc-pipe-icon { font-size: 26px; }
+.bc-pipe-icon-faint { opacity: .55; }
+.bc-pipe-token-hit { fill: transparent; cursor: grab; touch-action: none; }
+.bc-pipe-token-icon { font-size: 22px; pointer-events: none; }
+
+/* junior riddle fill-in (RiddleFillPuzzle) */
+.bc-riddle-fill-boxes { display: flex; gap: 8px; justify-content: center; }
+.bc-riddle-fill-box {
+  width: 44px;
+  height: 52px;
+  text-align: center;
+  font-family: var(--bc-disp);
+  font-weight: 700;
+  font-size: 1.4rem;
+  text-transform: uppercase;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.15);
+  color: var(--bc-paper);
+}
+.bc-riddle-fill-box:focus { outline: none; border-color: var(--bc-heat); }
+
+/* junior jewel box (JewelBoxPuzzle) */
+.bc-jewel-box {
+  background: linear-gradient(160deg, #3a2517, #241407);
+  border-radius: 18px;
+  padding: 16px;
+}
+.bc-jewel-svg { width: 40px; height: 40px; }
+.bc-jewel-slot { background: rgba(0,0,0,.25); border: none; }
+
+/* junior bird match (BirdMatchPuzzle) */
+.bc-bird-token-img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; border-radius: 8px; }
+
+/* junior lab beakers (LabBeakersPuzzle) */
+.bc-lab-bench {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  background: linear-gradient(180deg, #1c1033, #2a1a4a);
+  border-radius: 16px;
+  padding: 14px 8px;
+}
+.bc-flask { width: 44px; height: 66px; }
+.bc-flask-outline { fill: none; stroke: rgba(255,255,255,.85); stroke-width: 2; stroke-linejoin: round; }
 
 .bc-junior-strip {
   border: 2px dashed var(--bc-heat);
@@ -384,17 +755,102 @@
 .bc-overlay-header h2 { color: #fff; margin: 0; }
 .bc-suspect-list { display: flex; flex-direction: column; gap: 12px; }
 .bc-suspect-card { text-align: left; }
+.bc-casefile-number {
+  font-family: var(--bc-disp);
+  font-weight: 800;
+  font-size: 1.6rem;
+  color: var(--bc-ember);
+  letter-spacing: .05em;
+  margin: 0;
+}
+.bc-casefile-notes-label { font-size: .82rem; font-weight: 700; color: var(--bc-ice); margin: 4px 0 0; }
+.bc-casefile-notes {
+  width: 100%;
+  font-family: var(--bc-sans);
+  font-size: .95rem;
+  padding: .6em .8em;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.15);
+  color: var(--bc-paper);
+  resize: vertical;
+}
+.bc-casefile-notes:focus { outline: none; border-color: var(--bc-heat); }
+.bc-casefile-prompt {
+  background: rgba(255,138,61,.15);
+  border: 1.5px solid var(--bc-heat);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: var(--bc-paper);
+  font-size: .92rem;
+  text-align: left;
+  margin: 0;
+}
 
-/* accusation / case board */
+/* accusation */
 .bc-accusation { text-align: center; }
-.bc-case-table-wrap { overflow-x: auto; }
-.bc-case-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-.bc-case-table th, .bc-case-table td { padding: 6px 8px; text-align: center; white-space: nowrap; }
-.bc-case-table thead th { color: var(--bc-ember); font-family: var(--bc-disp); }
-.bc-case-table tbody th { text-align: left; color: var(--bc-ice); font-weight: 600; }
-.bc-case-table tbody tr:nth-child(odd) { background: rgba(255,255,255,.04); }
+/* .bc-startgate-sub carries its own top/bottom margin from other screens -
+   as a flex child here that stacks on top of .bc-stop's own gap and throws
+   off the screen's spacing rhythm, so it's reset to rely on the gap alone */
+.bc-accusation .bc-startgate-sub { margin: 0; }
 .bc-wrong-card { border-color: var(--bc-heat); background: rgba(255,138,61,.1); }
 .bc-accusation-grid { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+
+/* heat lock (finale combination lock) */
+.bc-heatlock-icon { animation: bc-heatlock-glow 2.2s ease-in-out infinite; }
+@keyframes bc-heatlock-glow {
+  0%, 100% { filter: drop-shadow(0 4px 10px rgba(0,0,0,.3)); transform: scale(1); }
+  50% { filter: drop-shadow(0 4px 18px rgba(255,138,61,.65)); transform: scale(1.08); }
+}
+.bc-heatlock-flavor {
+  color: var(--bc-ice);
+  font-size: .98rem;
+  line-height: 1.45;
+  max-width: 36ch;
+  margin: 0;
+}
+.bc-heat-lock {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  justify-content: center;
+  background: rgba(0,0,0,.2);
+  border-radius: 16px;
+  padding: 12px 6px;
+  width: 100%;
+  overflow-x: auto;
+}
+.bc-lock-digit { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 30px; flex: 0 0 auto; }
+.bc-lock-arrow {
+  background: none;
+  border: 0;
+  color: var(--bc-ember);
+  font-size: .7rem;
+  cursor: pointer;
+  padding: 3px;
+  line-height: 1;
+  touch-action: manipulation;
+}
+.bc-lock-arrow:active { transform: scale(.85); }
+.bc-lock-digit-value {
+  display: block;
+  width: 30px;
+  height: 42px;
+  line-height: 42px;
+  text-align: center;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #3a3020, #241c10);
+  border: 2px solid var(--bc-ember);
+  color: var(--bc-ember);
+  font-family: var(--bc-disp);
+  font-weight: 700;
+  font-size: 1.2rem;
+  animation: bc-lock-pop .25s ease;
+}
+@keyframes bc-lock-pop {
+  0% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
 
 /* certificate */
 .bc-certificate-screen { gap: 22px; }

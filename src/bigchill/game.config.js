@@ -8,15 +8,8 @@
 // both as an accessibility caption and as the placeholder text shown before
 // real video clips exist.
 //
-// Coordinates below are approximate Hanmer Springs landmarks and are marked
-// TBD - the build spec calls out exact pins/geofence radii as an open item
-// to confirm on site.
-
-export const TELLS = [
-  { id: 'stripes', label: 'Red and white stripes' },
-  { id: 'eucalyptus', label: 'Smell of eucalyptus' },
-  { id: 'bottlecaps', label: 'Drops shiny bottle caps' },
-];
+// Coordinates below are confirmed real Hanmer Springs grid references
+// (see docs/04-build-spec.md for geofence radius background).
 
 export const NARRATOR_CLIPS = {
   chiefIntro: {
@@ -102,7 +95,6 @@ export const SUSPECTS = [
         },
       },
     ],
-    traits: { stripes: false, eucalyptus: false, bottlecaps: false },
     clearedBy: 'A timestamped live TV alibi. No stripes, wrong scent.',
   },
   {
@@ -146,7 +138,6 @@ export const SUSPECTS = [
         },
       },
     ],
-    traits: { stripes: false, eucalyptus: false, bottlecaps: false },
     clearedBy: 'A neighbour saw him. No stripes, wrong scent.',
   },
   {
@@ -190,7 +181,6 @@ export const SUSPECTS = [
         },
       },
     ],
-    traits: { stripes: false, eucalyptus: false, bottlecaps: false },
     clearedBy: 'Front desk camera footage, and she is the one who raised the alarm.',
   },
   {
@@ -234,7 +224,6 @@ export const SUSPECTS = [
         keyEvidence: true,
       },
     ],
-    traits: { stripes: false, eucalyptus: false, bottlecaps: false },
     clearedBy: 'A timestamped science fair alibi. She is the witness who names the buyer.',
   },
   {
@@ -278,151 +267,143 @@ export const SUSPECTS = [
         keyEvidence: true,
       },
     ],
-    traits: { stripes: true, eucalyptus: true, bottlecaps: true },
     clearedBy: null,
   },
 ];
 
 export const STOPS = [
   {
-    id: 'pools_frontage',
+    id: 'village_green',
     order: 1,
     fixedStart: true,
-    title: 'The pools frontage',
-    locationLabel: 'Outside the thermal pools entrance, viewed from the footpath',
-    coords: { lat: -42.5228, lng: 172.8286 }, // TBD: confirm on site
-    geofenceRadiusM: 30,
-    suspectId: null,
-    puzzle: {
-      id: 'crime_scene',
-      type: 'lookAtWorld',
-      prompt:
-        'Look closely at the scene by the pump. Tap on anything the thief might have left behind.',
-      hints: [
-        'Check the grate for a snagged thread.',
-        'Take a sniff near the machine.',
-        'Look for anything small and shiny scattered on the ground.',
-      ],
-    },
-    juniorTask: {
-      prompt: 'Can you count the flags at the pools entrance?',
-      type: 'count',
-      skippable: true,
-    },
-    evidenceLabel: 'Three tells found at the scene, and the water was pumped out, not just cooled.',
-  },
-  {
-    id: 'village_green',
-    order: 2,
-    title: 'The village green and playground',
-    locationLabel: 'The village green, near the playground',
-    coords: { lat: -42.5237, lng: 172.8264 }, // TBD: confirm on site
+    title: 'The pools',
+    coords: { lat: -42.522642, lng: 172.829097 },
     geofenceRadiusM: 30,
     suspectId: 'steamwell',
     puzzle: {
-      id: 'village_green_count',
-      type: 'count',
-      prompt: 'Count the benches around the green to unlock the front desk camera timestamp.',
-      hints: ['Walk the edge of the green and count as you go.'],
+      id: 'village_green_rebus',
+      type: 'image',
+      prompt: 'A strange flyer pinned to the noticeboard. Work out what it is trying to tell you.',
+      hints: [
+        'Each picture stands for a word or a sound - say them out loud.',
+        'Line the clues up in order and see what they spell out.',
+      ],
+      data: { image: '/the-big-chill/puzzles/puzzle-1.png', alt: 'A picture rebus puzzle', answer: '32' },
     },
-    juniorTask: {
-      prompt: 'Can you find the swings? Or spot a dog?',
-      type: 'spot',
-      skippable: true,
+    juniorPuzzle: {
+      prompt: 'Drag the water drop through the pipe to the leak at the other end.',
+      type: 'pipeMaze',
+      data: {},
     },
-    evidenceLabel: 'Sandra is cleared, and hints the water was going somewhere, not just cooling.',
   },
   {
     id: 'main_avenue',
-    order: 3,
-    title: 'The shops on the main avenue',
-    locationLabel: 'The main shopping avenue',
-    coords: { lat: -42.5238, lng: 172.8281 }, // TBD: confirm on site
+    order: 2,
+    title: 'The main shops',
+    coords: { lat: -42.521361, lng: 172.828682 },
     geofenceRadiusM: 30,
     suspectId: 'bottler',
     puzzle: {
-      id: 'barty_card_cipher',
-      type: 'cipher',
-      prompt: 'A simple cipher on Barty’s flashy business card.',
-      hints: ['Try reading just the capital letters.'],
+      id: 'barty_bottle_scene',
+      type: 'image',
+      prompt: 'A busy scene outside Barty’s shop. Count how many water bottles you can spot.',
+      hints: [
+        'Look on rooftops, ledges, crates and market stalls, not just in people’s hands.',
+        'Ignore the little flasks people are carrying - only the bottles count.',
+      ],
+      // TODO: I counted 6 water bottles hidden in docs/puzzle 4.png - please
+      // double check this against the source image before relying on it,
+      // it's a dense scene and easy to miscount by one.
+      data: { image: '/the-big-chill/puzzles/puzzle-4.png', alt: 'A busy winter village scene', answer: '6' },
     },
-    juniorTask: {
-      prompt: 'Can you spot someone eating an ice cream, or find a striped awning?',
-      type: 'spot',
-      skippable: true,
+    juniorPuzzle: {
+      prompt: 'What falls out of the sky when it is really, really cold?',
+      type: 'riddleFill',
+      data: { answer: 'SNOW' },
     },
-    evidenceLabel: 'A dropped bottle cap stamped with a "B", and Barty has no real alibi.',
   },
   {
     id: 'visitor_centre',
-    order: 4,
-    title: 'The visitor centre',
-    locationLabel: 'The i-SITE visitor centre',
-    coords: { lat: -42.5232, lng: 172.8290 }, // TBD: confirm on site
+    order: 3,
+    title: 'The apartments',
+    coords: { lat: -42.520672, lng: 172.826481 },
     geofenceRadiusM: 30,
     suspectId: 'vonfrost',
     puzzle: {
-      id: 'visitor_centre_count',
-      type: 'count',
-      prompt: 'Count the flags outside, or read the opening hours sign, to reveal her TV alibi.',
-      hints: ['The flags are near the entrance.'],
+      id: 'visitor_centre_riddle',
+      type: 'riddle',
+      prompt: 'A riddle left at the information desk.',
+      hints: ['Strip away the frost.'],
+      data: {
+        riddle:
+          'High in a village where the frost never sleeps,\n' +
+          'two rival scales measure the same bitter cold.\n' +
+          'All winter they argue, degree against degree —\n' +
+          'save for a single reading where the quarrel is stilled,\n' +
+          'and both, just once, speak the very same word.\n' +
+          'Strip away the frost that clings before it,\n' +
+          'and the number left behind is my answer.',
+        answer: '40',
+      },
     },
-    juniorTask: {
-      prompt: 'Can you count the flags, or find a red car?',
-      type: 'count',
-      skippable: true,
+    juniorPuzzle: {
+      prompt: 'The Baroness spilled her jewel box - drag each gem back onto its matching cushion.',
+      type: 'jewelBox',
+      data: {},
     },
-    evidenceLabel: 'The Baroness is cleared, plus her sighting of a tanker up the back road.',
   },
   {
     id: 'forest_walk',
-    order: 5,
-    title: 'The forest walk edge',
-    locationLabel: 'The edge of the forest walk track',
-    coords: { lat: -42.5261, lng: 172.8320 }, // TBD: confirm on site
+    order: 4,
+    title: 'Keith’s cabin',
+    coords: { lat: -42.518661, lng: 172.824333 },
     geofenceRadiusM: 30,
     suspectId: 'kettle',
     puzzle: {
-      id: 'forest_walk_count',
-      type: 'count',
-      prompt: 'Count the big redwoods, or the steps at the track start, to reveal his alibi.',
-      hints: ['Look up - the tallest trees are the redwoods.'],
+      id: 'forest_walk_cipher',
+      type: 'numberCipher',
+      prompt: 'A pigpen cipher carved into a fallen log near Keith’s cabin.',
+      hints: [
+        'Open the decoder key below the symbols.',
+        'Decode it letter by letter - it spells out a number, but enter your answer as digits (e.g. 58), not the words.',
+      ],
+      data: { phrase: 'THIRTY SEVEN', answer: '37' },
     },
-    juniorTask: {
-      prompt: 'Can you find the biggest tree, or spot a bird?',
-      type: 'spot',
-      skippable: true,
+    juniorPuzzle: {
+      prompt: 'Can you identify the birds around Keith’s cabin?',
+      type: 'birdMatch',
+      data: {},
     },
-    evidenceLabel: 'Keith is cleared, plus his account of a truck up the back road all morning.',
   },
   {
     id: 'fairy_door_walk',
-    order: 6,
-    title: 'The fairy door walk',
-    locationLabel: 'The fairy door walk',
-    coords: { lat: -42.5254, lng: 172.8300 }, // TBD: confirm on site
+    order: 5,
+    title: 'The professor’s laboratory',
+    coords: { lat: -42.521752, lng: 172.827216 },
     geofenceRadiusM: 30,
     suspectId: 'watt',
     puzzle: {
-      id: 'watt_pump_receipt',
-      type: 'match',
-      prompt: 'A matching task using the pump receipt Professor Watt shows you.',
-      hints: ['Match the description on the receipt to what you have already found.'],
+      id: 'watt_triangle_puzzle',
+      type: 'image',
+      prompt:
+        'You spotted this image of Conical Hill in the 1940s pinned to the wall of the professor’s office. It looks like a cryptic challenge - how many triangles can you find?',
+      hints: [
+        'Count the small ones first, then look for triangles made up of two or more small ones together.',
+        'Do not forget the one big triangle around the outside.',
+      ],
+      data: { image: '/the-big-chill/puzzles/puzzle-5.jpg', alt: 'A triangle-counting puzzle', answer: '27' },
     },
-    juniorTask: {
-      prompt: 'Can you find and count the fairy doors?',
-      type: 'count',
-      skippable: true,
+    juniorPuzzle: {
+      prompt: 'How many beakers on the bench have pink liquid in them?',
+      type: 'labBeakers',
+      data: {},
     },
-    evidenceLabel:
-      'Watt is cleared, and the pump was sold to a man in a red and white striped bow tie who smelled of eucalyptus.',
   },
 ];
 
 export const GAME_CONFIG = {
   id: 'the-big-chill',
   title: 'The Big Chill',
-  tells: TELLS,
   suspects: SUSPECTS,
   stops: STOPS,
   narratorClips: NARRATOR_CLIPS,
