@@ -17,6 +17,7 @@ export default defineConfig({
         rodeoHq: 'rodeo-hq/index.html',
         rodeoPublic: 'the-rodeo/index.html',
         bigChill: 'the-big-chill/index.html',
+        bigChillAdmin: 'the-big-chill/admin/index.html',
       },
     },
   },

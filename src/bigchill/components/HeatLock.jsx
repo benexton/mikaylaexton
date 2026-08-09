@@ -12,7 +12,7 @@ const FLASH_MS = 1800;
 // code, tap the arrows to dial each wheel in, then try to turn the heat
 // back on. Same green/red whole-screen flash as every other answer check
 // in the game, just guarding the finale instead of a single stop.
-export default function HeatLock({ onComplete, onBack }) {
+export default function HeatLock({ onComplete, onOpenCaseFile, onBack }) {
   const [digits, setDigits] = useState(() => CODE.split('').map(() => 0));
   const [flash, setFlash] = useState(null); // null | 'correct' | 'wrong'
 
@@ -42,6 +42,11 @@ export default function HeatLock({ onComplete, onBack }) {
       </span>
       <p className="bc-kicker">Restore the heat</p>
       <h2 className="bc-startgate-title">Turn the heat back on</h2>
+      {onOpenCaseFile && (
+        <button className="bc-btn bc-btn-ghost bc-btn-small" onClick={onOpenCaseFile}>
+          Case file
+        </button>
+      )}
       <p className="bc-heatlock-flavor">
         The villain jammed the valve shut so no one could get hot water to the pools. Dial in every
         number your case file collected along the way, then crank it open and get the water flowing

@@ -13,7 +13,7 @@ import { clipUrl } from '../lib/bigchillSupabase.js';
 // catches that case too, not just genuine network errors. That path doesn't
 // apply once clips are cross-origin (Storage 404s properly), but the
 // timeout is harmless to keep as a backstop.
-export default function VideoCharacter({ clip, name, role, onDone, autoPlay = false }) {
+export default function VideoCharacter({ clip, name, role, onDone, autoPlay = false, overlay }) {
   const [mode, setMode] = useState(autoPlay ? 'playing' : 'idle');
   const [paused, setPaused] = useState(false);
   const videoRef = useRef(null);
@@ -99,6 +99,8 @@ export default function VideoCharacter({ clip, name, role, onDone, autoPlay = fa
             {mode === 'fallback' && <p className="bc-video-placeholder-note">Clip not recorded yet</p>}
           </div>
         )}
+
+        {overlay}
       </div>
 
       {mode === 'playing' && (

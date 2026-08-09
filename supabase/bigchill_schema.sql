@@ -71,3 +71,20 @@ create policy "bigchill accusations read own" on public.bigchill_accusations
 insert into storage.buckets (id, name, public)
   values ('bigchill-clips', 'bigchill-clips', true)
   on conflict (id) do nothing;
+
+-- 4. One-time play codes ----------------------------------------------------
+-- ~100 pre-generated codes (docs/Big-Chill-pw.pdf, seeded via
+-- bigchill_passwords_seed.sql), one per group/device. A code is burned the
+-- moment it's redeemed (used_at set), whether or not the group ever
+-- finishes - see bigchill-redeem-password's atomic update-where-null. RLS is
+-- enabled with NO policies, same reasoning as bigchill_secrets: a code can
+-- only ever be checked, redeemed, timed, or listed through the service-role
+-- edge functions below, never read directly with the anon key.
+create table if not exists public.bigchill_passwords (
+  code            text primary key,
+  used_at         timestamptz,
+  elapsed_seconds integer,
+  created_at      timestamptz not null default now()
+);
+
+alter table public.bigchill_passwords enable row level security;

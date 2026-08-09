@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import PasswordGate from './screens/PasswordGate.jsx';
 import StartGate from './screens/StartGate.jsx';
 import PrepScreen from './screens/PrepScreen.jsx';
 import Briefing from './screens/Briefing.jsx';
@@ -11,7 +12,8 @@ import Certificate from './screens/Certificate.jsx';
 import VideoCharacter from './components/VideoCharacter.jsx';
 import BackButton from './components/BackButton.jsx';
 import { GAME_CONFIG, NARRATOR_CLIPS } from './game.config.js';
-import { submitAccusation } from './lib/bigchillSupabase.js';
+import { submitAccusation, recordElapsedTime } from './lib/bigchillSupabase.js';
+import { loadProgress, saveProgress } from './lib/progressStorage.js';
 
 const STOPS = GAME_CONFIG.stops;
 const SUSPECTS = GAME_CONFIG.suspects;
@@ -26,14 +28,58 @@ function suspectFor(stop) {
 // (milestone 5 slice - see lib/bigchillSupabase.js); race mode itself is
 // still a later milestone.
 export default function BigChillApp() {
-  const [phase, setPhase] = useState('start');
-  const [juniorNames, setJuniorNames] = useState([]);
-  const [stopIndex, setStopIndex] = useState(0);
-  const [completedStopIds, setCompletedStopIds] = useState([]);
+  // Read once, synchronously, before anything else needs it - every
+  // useState below just picks its own field back out of the same object.
+  const [saved] = useState(() => loadProgress());
+
+  const [redeemedCode, setRedeemedCode] = useState(saved.code);
+  // Only trust a saved phase past the gate if a code was actually
+  // redeemed - a half-written blob with no code should never skip it.
+  const [phase, setPhase] = useState(saved.code ? saved.phase : 'password');
+  const [juniorNames, setJuniorNames] = useState(saved.juniorNames);
+  const [stopIndex, setStopIndex] = useState(saved.stopIndex);
+  const [completedStopIds, setCompletedStopIds] = useState(saved.completedStopIds);
   const [caseFileOpen, setCaseFileOpen] = useState(false);
   const [caseFileHighlightId, setCaseFileHighlightId] = useState(null);
-  const [stopNotes, setStopNotes] = useState({});
-  const [history, setHistory] = useState([]);
+  const [stopNotes, setStopNotes] = useState(saved.stopNotes);
+  const [history, setHistory] = useState(saved.history);
+  const [elapsedSeconds, setElapsedSeconds] = useState(saved.elapsedSeconds);
+  const startTimeRef = useRef(saved.startTime);
+
+  // Fires on every state change relevant to "where the group is" - cheap
+  // (one small JSON blob), and means a reload can never be more than one
+  // render behind. caseFileOpen/caseFileHighlightId are deliberately left
+  // out - that overlay just closes on reload, nothing is lost by re-opening
+  // it (the notes it edits are in stopNotes, which is persisted).
+  useEffect(() => {
+    saveProgress({
+      code: redeemedCode,
+      phase,
+      juniorNames,
+      stopIndex,
+      completedStopIds,
+      stopNotes,
+      history,
+      startTime: startTimeRef.current,
+      elapsedSeconds,
+    });
+  }, [redeemedCode, phase, juniorNames, stopIndex, completedStopIds, stopNotes, history, elapsedSeconds]);
+
+  function handlePasswordSuccess(code) {
+    setRedeemedCode(code);
+    setPhase('start');
+  }
+
+  // Timing runs start-to-finish across a whole playthrough: from the tap
+  // that leaves the start gate to the moment the finale's prison bars start
+  // dropping (see Finale's onBarsDown) - not from the password itself, so a
+  // group that pauses on the start-gate screen isn't penalised.
+  function handleBarsDown() {
+    if (!startTimeRef.current) return;
+    const secs = Math.round((Date.now() - startTimeRef.current) / 1000);
+    setElapsedSeconds(secs);
+    recordElapsedTime(redeemedCode, secs);
+  }
 
   function updateStopNote(stopId, text) {
     setStopNotes((notes) => ({ ...notes, [stopId]: text }));
@@ -112,11 +158,22 @@ export default function BigChillApp() {
     setCaseFileOpen(false);
     setCaseFileHighlightId(null);
     setStopNotes({});
+    setElapsedSeconds(null);
+    startTimeRef.current = null;
   }
 
   return (
     <div className="bc-app">
-      {phase === 'start' && <StartGate onBegin={() => goTo('prep')} />}
+      {phase === 'password' && <PasswordGate onSuccess={handlePasswordSuccess} />}
+
+      {phase === 'start' && (
+        <StartGate
+          onBegin={() => {
+            startTimeRef.current = Date.now();
+            goTo('prep');
+          }}
+        />
+      )}
 
       {phase === 'prep' && <PrepScreen onDone={() => goTo('briefing')} onBack={goBack} />}
 
@@ -168,10 +225,22 @@ export default function BigChillApp() {
         />
       )}
 
-      {phase === 'finale' && <Finale onDone={() => goTo('certificate')} onBack={goBack} />}
+      {phase === 'finale' && (
+        <Finale
+          onDone={() => goTo('certificate')}
+          onOpenCaseFile={() => setCaseFileOpen(true)}
+          onBarsDown={handleBarsDown}
+          onBack={goBack}
+        />
+      )}
 
       {phase === 'certificate' && (
-        <Certificate juniorNames={juniorNames} onRestart={restart} onBack={goBack} />
+        <Certificate
+          juniorNames={juniorNames}
+          elapsedSeconds={elapsedSeconds}
+          onRestart={restart}
+          onBack={goBack}
+        />
       )}
 
       {caseFileOpen && (

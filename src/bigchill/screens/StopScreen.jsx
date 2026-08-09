@@ -174,7 +174,7 @@ export default function StopScreen({ stop, suspect, juniorNames, progress, onCom
         </div>
       )}
 
-      {hasJuniors && (
+      {hasJuniors && !unlocked && (
         <div className="bc-junior-strip">
           <span className="bc-junior-badge">
             Junior Detective{juniorNames.length > 1 ? 's' : ''}: {juniorNames.join(', ')}

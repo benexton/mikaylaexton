@@ -155,8 +155,40 @@
 
 /* start gate */
 .bc-startgate-title { font-size: 2.2rem; color: #fff; }
-.bc-startgate-sub { color: var(--bc-ice); font-size: 1.02rem; max-width: 34ch; }
+.bc-startgate-sub { color: var(--bc-ice); font-size: 1.02rem; line-height: 1.4; width: 100%; }
 .bc-startgate-icon { font-size: 3.4rem; filter: drop-shadow(0 4px 10px rgba(0,0,0,.3)); }
+
+/* password gate */
+.bc-password-form { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.bc-password-input {
+  width: 100%;
+  font-family: var(--bc-sans);
+  font-size: 1.15rem;
+  text-align: center;
+  letter-spacing: .04em;
+  padding: .8em 1em;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+.bc-password-input::placeholder { color: rgba(255,255,255,.45); }
+.bc-password-input:focus { outline: none; border-color: var(--bc-heat); }
+.bc-password-error { margin: 0; color: var(--bc-heat); font-size: .88rem; font-weight: 700; }
+
+/* admin */
+.bc-admin-screen { max-width: 640px; align-items: stretch; }
+.bc-admin-table-wrap { width: 100%; overflow-x: auto; }
+.bc-admin-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.bc-admin-table th,
+.bc-admin-table td {
+  text-align: left;
+  padding: .5em .7em;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  white-space: nowrap;
+}
+.bc-admin-table th { color: var(--bc-ember); font-family: var(--bc-disp); font-weight: 700; }
+.bc-admin-table td { color: var(--bc-paper); }
 
 /* briefing */
 .bc-briefing { width: 100%; gap: 18px; }
@@ -509,13 +541,15 @@ button.bc-dense-cell {
   100% { opacity: 0; }
 }
 
-/* Barty's confession: theatrical prison bars slam down over the whole
-   screen while he talks - vertical bars with gaps so the clip still shows
-   through, like he's being watched from behind them. */
+/* Barty's confession: theatrical prison bars slam down over just the video
+   frame while he talks - vertical bars with gaps so the clip still shows
+   through, like he's being watched from behind them. Positioned absolute
+   within .bc-video-frame (position: relative, overflow: hidden) so it's
+   clipped to the frame's rounded corners rather than covering the screen. */
 .bc-prison-bars {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 1600;
+  z-index: 5;
   pointer-events: none;
   background: repeating-linear-gradient(
     90deg,
@@ -805,46 +839,47 @@ button.bc-dense-cell {
 .bc-heatlock-flavor {
   color: var(--bc-ice);
   font-size: .98rem;
-  line-height: 1.45;
-  max-width: 36ch;
+  line-height: 1.4;
+  width: 100%;
   margin: 0;
 }
 .bc-heat-lock {
   display: flex;
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 6px;
   justify-content: center;
   background: rgba(0,0,0,.2);
   border-radius: 16px;
-  padding: 12px 6px;
+  padding: 14px 8px;
   width: 100%;
   overflow-x: auto;
 }
-.bc-lock-digit { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 30px; flex: 0 0 auto; }
+.bc-lock-digit { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 40px; flex: 0 0 auto; }
 .bc-lock-arrow {
   background: none;
   border: 0;
   color: var(--bc-ember);
-  font-size: .7rem;
+  font-size: 1.15rem;
   cursor: pointer;
-  padding: 3px;
+  width: 100%;
+  padding: 10px 0;
   line-height: 1;
   touch-action: manipulation;
 }
 .bc-lock-arrow:active { transform: scale(.85); }
 .bc-lock-digit-value {
   display: block;
-  width: 30px;
-  height: 42px;
-  line-height: 42px;
+  width: 40px;
+  height: 58px;
+  line-height: 58px;
   text-align: center;
-  border-radius: 6px;
+  border-radius: 8px;
   background: linear-gradient(180deg, #3a3020, #241c10);
   border: 2px solid var(--bc-ember);
   color: var(--bc-ember);
   font-family: var(--bc-disp);
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.75rem;
   animation: bc-lock-pop .25s ease;
 }
 @keyframes bc-lock-pop {
@@ -866,6 +901,7 @@ button.bc-dense-cell {
 .bc-certificate .bc-kicker { color: var(--bc-heat-deep); }
 .bc-certificate h1 { font-size: 2rem; }
 .bc-certificate-name { font-family: var(--bc-disp); font-size: 1.5rem; color: var(--bc-heat-deep); margin: 10px 0; }
+.bc-certificate-time { font-weight: 700; color: var(--bc-ink-soft); margin: 14px 0 0; }
 
 @media print {
   .bc-no-print { display: none; }

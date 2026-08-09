@@ -7,13 +7,13 @@ import { NARRATOR_CLIPS } from '../game.config.js';
 // The heat-restoring combination lock (see HeatLock.jsx), then chiefFinale
 // and the barty_caught clip (prison bars drop partway through, see CSS),
 // then handoff to the certificate.
-export default function Finale({ onDone, onBack }) {
+export default function Finale({ onDone, onOpenCaseFile, onBarsDown, onBack }) {
   const [stage, setStage] = useState('lock'); // lock | chief | caught
 
   if (stage === 'lock') {
     return (
       <div className="bc-screen bc-stop">
-        <HeatLock onComplete={() => setStage('chief')} onBack={onBack} />
+        <HeatLock onComplete={() => setStage('chief')} onOpenCaseFile={onOpenCaseFile} onBack={onBack} />
       </div>
     );
   }
@@ -25,7 +25,10 @@ export default function Finale({ onDone, onBack }) {
         <VideoCharacter
           key={NARRATOR_CLIPS.chiefFinale.file}
           clip={NARRATOR_CLIPS.chiefFinale}
-          onDone={() => setStage('caught')}
+          onDone={() => {
+            setStage('caught');
+            onBarsDown?.();
+          }}
         />
       </div>
     );
@@ -34,12 +37,12 @@ export default function Finale({ onDone, onBack }) {
   return (
     <div className="bc-screen bc-stop">
       <BackButton onClick={() => setStage('chief')} />
-      <div className="bc-prison-bars" aria-hidden="true" />
       <VideoCharacter
         key={NARRATOR_CLIPS.bartyCaught.file}
         clip={NARRATOR_CLIPS.bartyCaught}
         onDone={onDone}
         autoPlay
+        overlay={<div className="bc-prison-bars" aria-hidden="true" />}
       />
     </div>
   );
