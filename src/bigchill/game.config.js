@@ -11,16 +11,29 @@
 // Coordinates below are confirmed real Hanmer Springs grid references
 // (see docs/04-build-spec.md for geofence radius background).
 
+// Poster stills shown before a clip is tapped/loaded. Bundled in the repo
+// (not the bigchill-clips Storage bucket) since these are small, fixed
+// images rather than swappable content - see public/the-big-chill/thumbnails.
+// Only the first three characters have a poster so far; the rest fall back
+// to the plain initials avatar in VideoCharacter until their images land.
+const THUMB = {
+  chief: '/the-big-chill/thumbnails/chief.png',
+  sandra: '/the-big-chill/thumbnails/sandra.png',
+  thief: '/the-big-chill/thumbnails/thief.png',
+};
+
 export const NARRATOR_CLIPS = {
   chiefIntro: {
     file: 'chief_intro.mp4',
     character: 'Chief Wembley',
+    poster: THUMB.chief,
     caption:
       "Detectives, thank goodness you are here. I am Chief Wembley, and we have a disaster. Overnight, somebody stole the heat from our famous hot pools. Stone cold, the lot of it. I have five suspects and not a single clue what to do next. That is where you come in. And this young detective here... by the power vested in me, I hereby swear you in as our Junior Detective. Your first job is the most important of all. Now, off to the pools, and watch for anything the thief left behind.",
   },
   chiefMidway: {
     file: 'chief_midway.mp4',
     character: 'Chief Wembley',
+    poster: THUMB.chief,
     caption:
       'Good work out there, team. The town is counting on you. Keep talking to those suspects, keep an eye on the evidence, and do not let anyone charming talk you out of it.',
     optional: true,
@@ -28,12 +41,14 @@ export const NARRATOR_CLIPS = {
   chiefFinale: {
     file: 'chief_finale.mp4',
     character: 'Chief Wembley',
+    poster: THUMB.chief,
     caption:
       'You did it. You cracked the case. We caught him red handed at the tanker, still filling his silly little bottles. The heat is coming back to the pools as we speak, and the whole town says thank you. And a very special thank you to our Junior Detective. Outstanding work. Case closed.',
   },
   thiefTaunt: {
     file: 'thief_taunt.mp4',
     character: 'The mystery thief',
+    poster: THUMB.thief,
     caption:
       'Well, well. If it is not the great detectives. Too late. The heat is mine now, every last drop of it, and you will never work out where it went. Enjoy the cold. You will not catch me. Ha.',
   },
@@ -147,6 +162,7 @@ export const SUSPECTS = [
     stopId: 'village_green',
     introClip: {
       file: 'sandra_intro.mp4',
+      poster: THUMB.sandra,
       caption:
         'Oh, you are the detectives. Thank goodness. I opened up this morning and the whole place was freezing. I have run these pools for years and I have never seen anything like it. Please, ask me anything, I just want this sorted.',
     },
@@ -156,6 +172,7 @@ export const SUSPECTS = [
         prompt: 'Where were you when it happened?',
         answerClip: {
           file: 'sandra_q1.mp4',
+          poster: THUMB.sandra,
           caption:
             'I was right here at the front desk the whole time, checking people in. It is all on the camera above the till, you can see me. The moment the water went cold, I raised the alarm and called the chief myself.',
         },
@@ -166,6 +183,7 @@ export const SUSPECTS = [
         prompt: 'Did you notice anything strange?',
         answerClip: {
           file: 'sandra_q2.mp4',
+          poster: THUMB.sandra,
           caption:
             'Now that you mention it, the water level dropped. A lot. It was not just cold, there was less of it. Almost like someone was, I do not know, pumping it out somewhere.',
         },
@@ -176,6 +194,7 @@ export const SUSPECTS = [
         prompt: 'Do you have keys to everything?',
         answerClip: {
           file: 'sandra_q3.mp4',
+          poster: THUMB.sandra,
           caption:
             'I do, and they never leave my belt, see. I know that makes me look suspicious, but I promise you, I am the one who wants this solved most of all. These pools are my life.',
         },
@@ -300,7 +319,7 @@ export const STOPS = [
     id: 'main_avenue',
     order: 2,
     title: 'The main shops',
-    coords: { lat: -42.521361, lng: 172.828682 },
+    coords: { lat: -42.5212, lng: 172.829797 },
     geofenceRadiusM: 30,
     suspectId: 'bottler',
     puzzle: {
@@ -326,7 +345,7 @@ export const STOPS = [
     id: 'visitor_centre',
     order: 3,
     title: 'The apartments',
-    coords: { lat: -42.520672, lng: 172.826481 },
+    coords: { lat: -42.52469665038154, lng: 172.8267932433111 },
     geofenceRadiusM: 30,
     suspectId: 'vonfrost',
     puzzle: {
@@ -356,7 +375,7 @@ export const STOPS = [
     id: 'forest_walk',
     order: 4,
     title: 'Keith’s cabin',
-    coords: { lat: -42.518661, lng: 172.824333 },
+    coords: { lat: -42.51930586164378, lng: 172.8270390591543 },
     geofenceRadiusM: 30,
     suspectId: 'kettle',
     puzzle: {

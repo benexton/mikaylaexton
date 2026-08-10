@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import PasswordGate from './screens/PasswordGate.jsx';
+import LocationNotice from './screens/LocationNotice.jsx';
 import StartGate from './screens/StartGate.jsx';
 import PrepScreen from './screens/PrepScreen.jsx';
 import Briefing from './screens/Briefing.jsx';
@@ -67,7 +68,7 @@ export default function BigChillApp() {
 
   function handlePasswordSuccess(code) {
     setRedeemedCode(code);
-    setPhase('start');
+    setPhase('locationNotice');
   }
 
   // Timing runs start-to-finish across a whole playthrough: from the tap
@@ -165,6 +166,8 @@ export default function BigChillApp() {
   return (
     <div className="bc-app">
       {phase === 'password' && <PasswordGate onSuccess={handlePasswordSuccess} />}
+
+      {phase === 'locationNotice' && <LocationNotice onContinue={() => setPhase('start')} />}
 
       {phase === 'start' && (
         <StartGate
