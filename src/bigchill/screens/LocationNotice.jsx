@@ -21,6 +21,10 @@ export default function LocationNotice({ onContinue }) {
             Safety first: keep an eye on the road and your surroundings while you play, look properly before crossing
             any street, and stay together as a group.
           </li>
+          <li>
+            Runs best on a tablet or iPad with a steady internet connection - a phone hotspot works well if Wi-Fi is
+            patchy out and about.
+          </li>
         </ul>
       </div>
 
