@@ -1,7 +1,7 @@
 import { GAME_CONFIG } from './game.config.js';
 import { clipUrl } from './lib/bigchillSupabase.js';
 
-const CACHE_NAME = 'the-big-chill-clips-v2'; // keep in sync with public/the-big-chill/sw.js
+const CACHE_NAME = 'the-big-chill-clips-v3'; // keep in sync with public/the-big-chill/sw.js
 
 export function getAllClipUrls() {
   const files = new Set();
