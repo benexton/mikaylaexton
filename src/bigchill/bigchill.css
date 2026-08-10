@@ -325,10 +325,9 @@
   font-family: var(--bc-disp);
   font-weight: 700;
   color: var(--bc-ember);
-  margin: 0 0 .3em;
+  margin: 0;
   font-size: .95rem;
 }
-.bc-caption-text { margin: 0; color: var(--bc-paper); font-size: .98rem; }
 
 /* stop screen */
 .bc-stop { align-items: stretch; text-align: left; gap: 22px; }

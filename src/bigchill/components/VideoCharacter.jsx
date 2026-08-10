@@ -156,7 +156,6 @@ export default function VideoCharacter({ clip, name, role, onDone, autoPlay = fa
 
       <div className="bc-caption-box">
         <p className="bc-caption-name">{clip.character || name}</p>
-        <p className="bc-caption-text">{clip.caption}</p>
       </div>
 
       {(mode === 'fallback' || mode === 'idle') && (
