@@ -28,6 +28,7 @@ export default function StopScreen({ stop, suspect, juniorNames, progress, onCom
   const [unlocked, setUnlocked] = useState(false);
   const [showEvidence, setShowEvidence] = useState(false);
   const [flash, setFlash] = useState(null); // null | 'correct' | 'wrong'
+  const [needsJuniorNotice, setNeedsJuniorNotice] = useState(false);
 
   function handleBack() {
     if (showEvidence) {
@@ -82,11 +83,21 @@ export default function StopScreen({ stop, suspect, juniorNames, progress, onCom
   // correct check is also the moment the interrogation questions unlock, not
   // something that happens later after the interview. Once unlocked, the
   // same button just moves the group on to the evidence card.
+  //
+  // A right main-puzzle answer with the junior puzzle still outstanding is
+  // its own case, not a 'wrong' one: flashing red there reads as "your main
+  // answer is wrong" when it's actually correct, so this shows a specific
+  // nudge instead of the red flash.
   function handleBottomButtonClick() {
     if (unlocked) {
       setShowEvidence(true);
       return;
     }
+    if (mainPuzzleCorrect && hasJuniors && !juniorDone) {
+      setNeedsJuniorNotice(true);
+      return;
+    }
+    setNeedsJuniorNotice(false);
     const complete = mainPuzzleCorrect && (!hasJuniors || juniorDone);
     setFlash(complete ? 'correct' : 'wrong');
     setTimeout(() => {
@@ -140,8 +151,8 @@ export default function StopScreen({ stop, suspect, juniorNames, progress, onCom
                   className="bc-btn bc-btn-ghost bc-question-btn"
                   onClick={() => setActiveQuestionId(q.id)}
                 >
-                  {q.prompt}
-                  {askedQuestionIds.includes(q.id) && <span className="bc-kicker"> Asked</span>}
+                  <span className="bc-question-prompt">{q.prompt}</span>
+                  {askedQuestionIds.includes(q.id) && <span className="bc-kicker">Asked</span>}
                 </button>
               ))}
             </div>
@@ -180,6 +191,11 @@ export default function StopScreen({ stop, suspect, juniorNames, progress, onCom
             Junior Detective{juniorNames.length > 1 ? 's' : ''}: {juniorNames.join(', ')}
           </span>
           <p>{stop.juniorPuzzle.prompt}</p>
+          {needsJuniorNotice && !juniorDone && (
+            <p className="bc-junior-notice">
+              Main puzzle solved! Finish this Junior Detective puzzle too before you check again.
+            </p>
+          )}
           {!juniorDone && (
             <JuniorPuzzleView puzzle={stop.juniorPuzzle} onSolved={() => setJuniorDone(true)} />
           )}

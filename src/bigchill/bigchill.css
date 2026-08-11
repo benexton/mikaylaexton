@@ -562,31 +562,6 @@ button.bc-dense-cell {
   100% { opacity: 0; }
 }
 
-/* Barty's confession: theatrical prison bars slam down over just the video
-   frame while he talks - vertical bars with gaps so the clip still shows
-   through, like he's being watched from behind them. Positioned absolute
-   within .bc-video-frame (position: relative, overflow: hidden) so it's
-   clipped to the frame's rounded corners rather than covering the screen. */
-.bc-prison-bars {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(15, 12, 10, .94) 0px,
-    rgba(15, 12, 10, .94) 16px,
-    transparent 16px,
-    transparent 64px
-  );
-  box-shadow: inset 0 0 80px rgba(0, 0, 0, .6);
-  transform: translateY(-105%);
-  animation: bc-prison-bars-drop .7s cubic-bezier(.32, 1.5, .5, 1) 2s forwards;
-}
-@keyframes bc-prison-bars-drop {
-  to { transform: translateY(0); }
-}
-
 .bc-match-grid { display: flex; gap: 10px; }
 .bc-match-col { flex: 1; display: flex; flex-direction: column; gap: 8px; }
 .bc-match-btn {
@@ -755,6 +730,7 @@ button.bc-dense-cell {
   padding: .3em .8em;
 }
 .bc-junior-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.bc-junior-notice { color: var(--bc-heat); font-weight: 700; font-size: .88rem; margin: 0; }
 
 .bc-evidence-card { border-color: var(--bc-good); background: rgba(63,166,107,.12); }
 .bc-evidence-card h3 { color: var(--bc-good); }
@@ -764,7 +740,9 @@ button.bc-dense-cell {
 
 /* interrogation */
 .bc-question-list { display: flex; flex-direction: column; gap: 8px; }
-.bc-question-btn { display: flex; justify-content: space-between; align-items: center; text-align: left; }
+.bc-question-btn { display: flex; justify-content: space-between; align-items: center; gap: .6em; text-align: left; }
+.bc-question-prompt { flex: 1; min-width: 0; }
+.bc-question-btn .bc-kicker { flex-shrink: 0; }
 
 /* prep / pre-download screen */
 .bc-prep { gap: 18px; }
@@ -806,7 +784,18 @@ button.bc-dense-cell {
   flex-direction: column;
   gap: 16px;
 }
-.bc-overlay-header { display: flex; align-items: center; justify-content: space-between; }
+.bc-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: -20px;
+  margin: -20px -20px 0;
+  padding: 20px 20px 16px;
+  background: var(--bc-frost-deep);
+  border-radius: 20px 20px 0 0;
+  z-index: 1;
+}
 .bc-overlay-header h2 { color: #fff; margin: 0; }
 .bc-suspect-list { display: flex; flex-direction: column; gap: 12px; }
 .bc-suspect-card { text-align: left; }

@@ -5,8 +5,7 @@ import HeatLock from '../components/HeatLock.jsx';
 import { NARRATOR_CLIPS } from '../game.config.js';
 
 // The heat-restoring combination lock (see HeatLock.jsx), then chiefFinale
-// and the barty_caught clip (prison bars drop partway through, see CSS),
-// then handoff to the certificate.
+// and the barty_caught clip, then handoff to the certificate.
 export default function Finale({ onDone, onOpenCaseFile, onBarsDown, onBack }) {
   const [stage, setStage] = useState('lock'); // lock | chief | caught
 
@@ -42,7 +41,6 @@ export default function Finale({ onDone, onOpenCaseFile, onBarsDown, onBack }) {
         clip={NARRATOR_CLIPS.bartyCaught}
         onDone={onDone}
         autoPlay
-        overlay={<div className="bc-prison-bars" aria-hidden="true" />}
       />
     </div>
   );

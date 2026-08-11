@@ -22,6 +22,7 @@ const THUMB = {
   barty: '/the-big-chill/thumbnails/barty.png',
   keith: '/the-big-chill/thumbnails/keith.png',
   watts: '/the-big-chill/thumbnails/watts.png',
+  prison: '/the-big-chill/thumbnails/prison.png',
 };
 
 export const NARRATOR_CLIPS = {
@@ -57,7 +58,7 @@ export const NARRATOR_CLIPS = {
   bartyCaught: {
     file: 'barty_caught.mp4',
     character: 'Barty Bottler',
-    poster: THUMB.barty,
+    poster: THUMB.prison,
     caption:
       'No, no, this is a misunderstanding. Do you have any idea how much that water was worth? Millions. Millions. I was going to be rich. It is not fair. I nearly got away with it too.',
     optional: true,
@@ -155,7 +156,7 @@ export const SUSPECTS = [
       },
       {
         id: 'q3',
-        prompt: 'You do not like the crowds, do you?',
+        prompt: "You don't like the crowds, do you?",
         answerClip: {
           file: 'keith_q3.mp4',
           poster: THUMB.keith,
@@ -285,7 +286,7 @@ export const SUSPECTS = [
       },
       {
         id: 'q2',
-        prompt: 'What is in the briefcase?',
+        prompt: "What's in the bottles on the counter?",
         answerClip: {
           file: 'barty_q2.mp4',
           poster: THUMB.barty,

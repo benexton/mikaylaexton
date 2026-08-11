@@ -72,9 +72,10 @@ export default function BigChillApp() {
   }
 
   // Timing runs start-to-finish across a whole playthrough: from the tap
-  // that leaves the start gate to the moment the finale's prison bars start
-  // dropping (see Finale's onBarsDown) - not from the password itself, so a
-  // group that pauses on the start-gate screen isn't penalised.
+  // that leaves the start gate to the moment chiefFinale finishes and the
+  // barty_caught clip starts (see Finale's onBarsDown) - not from the
+  // password itself, so a group that pauses on the start-gate screen isn't
+  // penalised.
   function handleBarsDown() {
     if (!startTimeRef.current) return;
     const secs = Math.round((Date.now() - startTimeRef.current) / 1000);
