@@ -8,7 +8,7 @@
 // the clips bucket covers. Clips are cross-origin (Supabase Storage), so
 // this is plain-string, not import.meta.env - a service worker file under
 // public/ isn't run through Vite's env substitution.
-const CACHE_NAME = 'the-big-chill-clips-v3';
+const CACHE_NAME = 'the-big-chill-clips-v4';
 const CLIPS_ORIGIN = 'https://dwvsniafixisrfrszjjr.supabase.co';
 const CLIPS_PATH_PREFIX = '/storage/v1/object/public/bigchill-clips/';
 

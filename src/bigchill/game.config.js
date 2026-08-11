@@ -14,12 +14,14 @@
 // Poster stills shown before a clip is tapped/loaded. Bundled in the repo
 // (not the bigchill-clips Storage bucket) since these are small, fixed
 // images rather than swappable content - see public/the-big-chill/thumbnails.
-// Only the first three characters have a poster so far; the rest fall back
-// to the plain initials avatar in VideoCharacter until their images land.
 const THUMB = {
   chief: '/the-big-chill/thumbnails/chief.png',
   sandra: '/the-big-chill/thumbnails/sandra.png',
   thief: '/the-big-chill/thumbnails/thief.png',
+  baroness: '/the-big-chill/thumbnails/baroness.png',
+  barty: '/the-big-chill/thumbnails/barty.png',
+  keith: '/the-big-chill/thumbnails/keith.png',
+  watts: '/the-big-chill/thumbnails/watts.png',
 };
 
 export const NARRATOR_CLIPS = {
@@ -55,6 +57,7 @@ export const NARRATOR_CLIPS = {
   bartyCaught: {
     file: 'barty_caught.mp4',
     character: 'Barty Bottler',
+    poster: THUMB.barty,
     caption:
       'No, no, this is a misunderstanding. Do you have any idea how much that water was worth? Millions. Millions. I was going to be rich. It is not fair. I nearly got away with it too.',
     optional: true,
@@ -76,6 +79,7 @@ export const SUSPECTS = [
     stopId: 'visitor_centre',
     introClip: {
       file: 'baroness_intro.mp4',
+      poster: THUMB.baroness,
       caption:
         'You wish to speak with me? How quaint. Baroness Cornelia von Frost, of Frosthaven Spa, the superior spa, obviously. I am only visiting your soggy little town to see what all the fuss was about. And now the pools are cold. What a shame. What a terrible, terrible shame.',
     },
@@ -85,6 +89,7 @@ export const SUSPECTS = [
         prompt: 'Where were you when it happened?',
         answerClip: {
           file: 'baroness_q1.mp4',
+          poster: THUMB.baroness,
           caption:
             'Darling, I was on live television, promoting my own magnificent spa. Cameras, lights, an adoring audience. You may check the broadcast. I could not possibly have been skulking about your grubby pools. I have people for that. Well, I would, if I did that sort of thing, which I do not.',
         },
@@ -95,6 +100,7 @@ export const SUSPECTS = [
         prompt: 'Did you see anything?',
         answerClip: {
           file: 'baroness_q2.mp4',
+          poster: THUMB.baroness,
           caption:
             'See anything? I saw this town at its worst, that is what I saw. Although... yes, there was a filthy tanker truck sneaking up one of your back roads. Dreadful thing. Ruined my photograph.',
         },
@@ -105,6 +111,7 @@ export const SUSPECTS = [
         prompt: 'Would you benefit from the pools closing?',
         answerClip: {
           file: 'baroness_q3.mp4',
+          poster: THUMB.baroness,
           caption:
             'Are you accusing me? How dare you. Naturally more tourists would come to Frosthaven. Naturally I would be delighted. But I did not do it, and you cannot prove a thing, because there is nothing to prove. Good day.',
         },
@@ -119,6 +126,7 @@ export const SUSPECTS = [
     stopId: 'forest_walk',
     introClip: {
       file: 'keith_intro.mp4',
+      poster: THUMB.keith,
       caption:
         'What do you want. Oh, detectives, is it. Keith Kettle. I live up the hill, away from all the noise and the crowds and the splashing. Best place in town. And no, before you ask, I did not touch your precious pools. Though I will not pretend I am sad to see them quiet.',
     },
@@ -128,6 +136,7 @@ export const SUSPECTS = [
         prompt: 'Where were you this morning?',
         answerClip: {
           file: 'keith_q1.mp4',
+          poster: THUMB.keith,
           caption:
             'Up the hill, chopping firewood, same as every morning. My neighbour waved at me over the fence, ask her. I was nowhere near the water, and my boots have never been so much as damp. Muddy, aye. Damp, no.',
         },
@@ -138,6 +147,7 @@ export const SUSPECTS = [
         prompt: 'Did you hear anything unusual?',
         answerClip: {
           file: 'keith_q2.mp4',
+          poster: THUMB.keith,
           caption:
             'Heard a truck. Big one. Rumbling up the back road all morning, there and back, there and back. Woke me twice. If you want your culprit, you go and find that truck.',
         },
@@ -148,6 +158,7 @@ export const SUSPECTS = [
         prompt: 'You do not like the crowds, do you?',
         answerClip: {
           file: 'keith_q3.mp4',
+          poster: THUMB.keith,
           caption:
             'No, I do not. Too many people, too much racket. But wanting a bit of peace and quiet is not a crime, is it. I would never wreck the place. I just want to be left alone. Now shoo.',
         },
@@ -209,6 +220,7 @@ export const SUSPECTS = [
     stopId: 'fairy_door_walk',
     introClip: {
       file: 'watt_intro.mp4',
+      poster: THUMB.watts,
       caption:
         'Visitors. Marvellous. Do come in, mind the toaster, it butters its own toast now, quite pleased with that one. Professor Iona Watt, inventor, tinkerer, occasional small explosion. You are the detectives. Splendid. How can I help. Do not touch the red lever.',
     },
@@ -218,6 +230,7 @@ export const SUSPECTS = [
         prompt: 'Where were you when it happened?',
         answerClip: {
           file: 'watt_q1.mp4',
+          poster: THUMB.watts,
           caption:
             'Oh, at the science fair, showing off the self buttering toaster. Won a ribbon. There are photographs, I am the one covered in butter. So it was certainly not me freezing your pools, I was far too busy buttering.',
         },
@@ -227,6 +240,7 @@ export const SUSPECTS = [
         prompt: 'Have you sold any machines lately?',
         answerClip: {
           file: 'watt_q2.mp4',
+          poster: THUMB.watts,
           caption:
             'Machines, machines... oh. Oh yes. Last week. A lovely powerful pump, very high pressure. Sold it to a charming gentleman. Red and white striped bow tie, terribly smart. Kept offering me eucalyptus lozenges. Minty fellow. Did I do something wrong?',
         },
@@ -237,6 +251,7 @@ export const SUSPECTS = [
         prompt: 'What could someone do with that pump?',
         answerClip: {
           file: 'watt_q3.mp4',
+          poster: THUMB.watts,
           caption:
             'With a pump that size. Move an enormous amount of liquid, very quickly. Water, for instance. You could drain a whole pool with that and pipe it straight into, say, a tanker truck. Goodness. That is rather what happened, is it not.',
         },
@@ -252,6 +267,7 @@ export const SUSPECTS = [
     stopId: 'main_avenue',
     introClip: {
       file: 'barty_intro.mp4',
+      poster: THUMB.barty,
       caption:
         'Detectives. Charmed, truly charmed. Barty Bottler, entrepreneur, visionary, man of the people. Terrible business about the pools. Just terrible. Lozenge? No? Suit yourself. Now, I am a very busy man, but for you, I have got all the time in the world. Ask away.',
     },
@@ -261,6 +277,7 @@ export const SUSPECTS = [
         prompt: 'Where were you when it happened?',
         answerClip: {
           file: 'barty_q1.mp4',
+          poster: THUMB.barty,
           caption:
             'Me? I was, ah, meeting investors. Very important people. Very hush hush. Can I prove it? Well, a gentleman of my standing does not need to prove anything. You will simply have to take my word for it.',
         },
@@ -271,6 +288,7 @@ export const SUSPECTS = [
         prompt: 'What is in the briefcase?',
         answerClip: {
           file: 'barty_q2.mp4',
+          poster: THUMB.barty,
           caption:
             'Ah, now you are asking the right questions. Samples. My finest product. Premium bottled water, straight from a very special source. Costs a fortune, worth every cent. One day this town will be famous for it. Trust me.',
         },
@@ -280,6 +298,7 @@ export const SUSPECTS = [
         prompt: 'Nice bow tie. Is that your style?',
         answerClip: {
           file: 'barty_q3.mp4',
+          poster: THUMB.barty,
           caption:
             'You noticed. Red and white stripes, my signature. I am never without it. Matches the hatband, you see. A man has got to have a look. Now, was there anything else, or shall I get back to my terribly important meetings?',
         },
