@@ -181,15 +181,23 @@ export default function TreeViewer() {
       )}
 
       <button
-        className="tv-panel-toggle"
+        className={`tv-panel-toggle ${panelOpen ? 'tv-panel-toggle-open' : ''}`}
         onClick={() => setPanelOpen((v) => !v)}
         aria-expanded={panelOpen}
-        aria-label={panelOpen ? 'Hide layers panel' : 'Show layers panel'}
+        aria-label="Show layers panel"
       >
-        {panelOpen ? '✕' : '☰'}
+        ☰
       </button>
 
       <div className={`tv-panel ${panelOpen ? 'tv-panel-open' : ''}`}>
+        <button
+          className="tv-panel-close"
+          onClick={() => setPanelOpen(false)}
+          aria-label="Hide layers panel"
+        >
+          ✕
+        </button>
+
         <h1>Waihoro Spreydon-Cashmere-Heathcote Community Board Area Trees</h1>
         <p className="tv-subtitle">Sourced from Christchurch City Council open data</p>
 

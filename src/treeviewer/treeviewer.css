@@ -69,6 +69,27 @@ body {
   display: none;
 }
 
+/* Sits inside the panel itself (top-right corner of the box), not the
+   viewport - only relevant once the panel has opened, so it's positioned
+   relative to .tv-panel (which is itself `position: absolute`, giving it a
+   containing block) rather than needing to track the panel's on-screen
+   position, which shifts with its content-driven height on mobile. */
+.tv-panel-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--tv-paper);
+  box-shadow: var(--tv-shadow);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+}
+
 .tv-panel {
   position: absolute;
   top: 0.75rem;
@@ -184,6 +205,9 @@ body {
 /* Tablet and phone: panel becomes collapsible so the map can stay full-bleed. */
 @media (max-width: 720px) {
   .tv-panel-toggle { display: block; }
+  .tv-panel-toggle-open { display: none; }
+
+  .tv-panel-close { display: block; }
 
   .tv-panel {
     top: auto;
@@ -203,4 +227,6 @@ body {
     opacity: 1;
     pointer-events: auto;
   }
+
+  .tv-panel h1 { padding-right: 2.2rem; }
 }
