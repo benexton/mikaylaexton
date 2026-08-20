@@ -1,0 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --tv-ink: #1f2a22;
+  --tv-paper: #ffffff;
+  --tv-line: #e2e5df;
+  --tv-shadow: 0 8px 28px rgba(20, 30, 20, 0.18);
+  --tv-sans: 'Inter', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--tv-sans);
+  color: var(--tv-ink);
+  overscroll-behavior: none;
+}
+
+.tv-root {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.tv-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #eef1ec;
+}
+
+/* Sits above Leaflet's own panes/controls (which run up to z-index ~700-1000). */
+.tv-status,
+.tv-panel-toggle,
+.tv-panel {
+  z-index: 1200;
+}
+
+.tv-status {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--tv-paper);
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  box-shadow: var(--tv-shadow);
+  font-size: 0.85rem;
+}
+.tv-status-error { color: #b23a3a; }
+
+.tv-panel-toggle {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--tv-paper);
+  box-shadow: var(--tv-shadow);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+}
+
+.tv-panel {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  width: min(20rem, calc(100vw - 1.5rem));
+  max-height: calc(100dvh - 1.5rem);
+  overflow-y: auto;
+  background: var(--tv-paper);
+  border-radius: 14px;
+  box-shadow: var(--tv-shadow);
+  padding: 1rem 1.1rem 1.1rem;
+}
+
+.tv-panel h1 {
+  margin: 0 0 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.tv-subtitle {
+  margin: 0 0 0.85rem;
+  font-size: 0.75rem;
+  color: #6b756c;
+}
+
+.tv-location-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--tv-line);
+  font-size: 0.85rem;
+}
+
+.tv-location-select select {
+  font-family: var(--tv-sans);
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--tv-line);
+  background: var(--tv-paper);
+  color: var(--tv-ink);
+}
+
+.tv-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--tv-line);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: #4a5249;
+  cursor: pointer;
+}
+
+.tv-checkbox-row input { margin-top: 0.15rem; flex: none; accent-color: var(--tv-ink); }
+
+.tv-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.tv-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  user-select: none;
+}
+
+.tv-toggle input { margin: 0; accent-color: var(--tv-ink); }
+
+.tv-swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.tv-toggle-label { flex: 1; }
+
+.tv-toggle-count {
+  font-variant-numeric: tabular-nums;
+  color: #6b756c;
+  font-size: 0.8rem;
+}
+
+.tv-popup { font-family: var(--tv-sans); font-size: 0.82rem; min-width: 10rem; }
+.tv-popup-row { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.1rem 0; }
+.tv-popup-row + .tv-popup-row { border-top: 1px solid var(--tv-line); }
+.tv-popup-row span:first-child { color: #6b756c; }
+
+/* Tablet and phone: panel becomes collapsible so the map can stay full-bleed. */
+@media (max-width: 720px) {
+  .tv-panel-toggle { display: block; }
+
+  .tv-panel {
+    top: auto;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    max-height: min(60dvh, 26rem);
+    transform: translateY(calc(100% + 1rem));
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .tv-panel-open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

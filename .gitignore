@@ -4,3 +4,5 @@ dist
 .env.local
 .env.*.local
 supabase/.temp
+public/treeviewer/trees-raw.geojson
+scripts/.geodata-cache

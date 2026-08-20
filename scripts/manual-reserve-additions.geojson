@@ -1,0 +1,327 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "source": "manual-tag",
+        "reason": "Confirmed CCC-managed (Rudolf Steiner School / Kidsfirst Opawa Saint Martins area) but not present in LINZ CRoSL",
+        "TitleNo": "CB234/76",
+        "EstateDescription": "Fee Simple, 1/1, Part Rural Section 38, 38,407 m2"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              172.660902,
+              -43.562514
+            ],
+            [
+              172.6611,
+              -43.562442
+            ],
+            [
+              172.661548,
+              -43.560486
+            ],
+            [
+              172.661631,
+              -43.560125
+            ],
+            [
+              172.661668,
+              -43.559962
+            ],
+            [
+              172.661681,
+              -43.559906
+            ],
+            [
+              172.661702,
+              -43.559813
+            ],
+            [
+              172.661678,
+              -43.55981
+            ],
+            [
+              172.661523,
+              -43.559791
+            ],
+            [
+              172.661344,
+              -43.55977
+            ],
+            [
+              172.661211,
+              -43.559754
+            ],
+            [
+              172.661262,
+              -43.559531
+            ],
+            [
+              172.66097,
+              -43.559496
+            ],
+            [
+              172.660928,
+              -43.559677
+            ],
+            [
+              172.660838,
+              -43.56008
+            ],
+            [
+              172.6603,
+              -43.559979
+            ],
+            [
+              172.660262,
+              -43.560052
+            ],
+            [
+              172.659979,
+              -43.560589
+            ],
+            [
+              172.659795,
+              -43.560939
+            ],
+            [
+              172.659786,
+              -43.560956
+            ],
+            [
+              172.65932,
+              -43.561841
+            ],
+            [
+              172.659304,
+              -43.561871
+            ],
+            [
+              172.659297,
+              -43.561883
+            ],
+            [
+              172.659372,
+              -43.561914
+            ],
+            [
+              172.659954,
+              -43.562182
+            ],
+            [
+              172.660423,
+              -43.562373
+            ],
+            [
+              172.660902,
+              -43.562514
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "source": "manual-tag",
+        "reason": "Confirmed CCC-managed (1 Ombersley Terrace, near Kidsfirst Opawa Saint Martins) but not present in LINZ CRoSL",
+        "TitleNo": "CB206/272",
+        "EstateDescription": "Fee Simple, 1/1, Lot 15 Deposited Plan 800, 3,262 m2"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              172.660406,
+              -43.559778
+            ],
+            [
+              172.6603,
+              -43.559979
+            ],
+            [
+              172.660838,
+              -43.56008
+            ],
+            [
+              172.660928,
+              -43.559677
+            ],
+            [
+              172.66097,
+              -43.559496
+            ],
+            [
+              172.66102,
+              -43.559278
+            ],
+            [
+              172.66102,
+              -43.559272
+            ],
+            [
+              172.66102,
+              -43.559266
+            ],
+            [
+              172.661019,
+              -43.55926
+            ],
+            [
+              172.661017,
+              -43.559254
+            ],
+            [
+              172.661014,
+              -43.559249
+            ],
+            [
+              172.66101,
+              -43.559243
+            ],
+            [
+              172.661005,
+              -43.559239
+            ],
+            [
+              172.660999,
+              -43.559234
+            ],
+            [
+              172.660993,
+              -43.55923
+            ],
+            [
+              172.660986,
+              -43.559227
+            ],
+            [
+              172.660978,
+              -43.559224
+            ],
+            [
+              172.66097,
+              -43.559222
+            ],
+            [
+              172.660962,
+              -43.559221
+            ],
+            [
+              172.660954,
+              -43.559221
+            ],
+            [
+              172.660946,
+              -43.559221
+            ],
+            [
+              172.660937,
+              -43.559222
+            ],
+            [
+              172.66093,
+              -43.559224
+            ],
+            [
+              172.66066,
+              -43.559294
+            ],
+            [
+              172.660494,
+              -43.55961
+            ],
+            [
+              172.660482,
+              -43.559633
+            ],
+            [
+              172.660406,
+              -43.559778
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "source": "manual-tag",
+        "reason": "Mozuku Lakes / Ferrymead area - dense planted-since-2016 cluster, not present in LINZ CRoSL; ownership not independently verified",
+        "TitleNo": "CB25F/73",
+        "EstateDescription": "Fee Simple, 1/1, Part Lot 7 Deposited Plan 1604, 6,070 m2"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              172.679797,
+              -43.555506
+            ],
+            [
+              172.679829,
+              -43.555524
+            ],
+            [
+              172.680455,
+              -43.554642
+            ],
+            [
+              172.679568,
+              -43.554545
+            ],
+            [
+              172.679207,
+              -43.555139
+            ],
+            [
+              172.679797,
+              -43.555506
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "source": "manual-tag",
+        "reason": "Sumner Coronation Garden + adjoining Clifton Terrace/Main Road trees - likely untitled beachfront/esplanade reserve (zero Property Titles AND zero CRoSL record at this location), boundary hand-drawn around the known tree cluster rather than extracted from an official parcel since none exists here"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              172.747,
+              -43.5665
+            ],
+            [
+              172.756,
+              -43.5665
+            ],
+            [
+              172.756,
+              -43.565
+            ],
+            [
+              172.747,
+              -43.565
+            ],
+            [
+              172.747,
+              -43.5665
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
