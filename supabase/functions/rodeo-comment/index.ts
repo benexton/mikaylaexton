@@ -6,7 +6,7 @@
 //
 // Deploy: supabase functions deploy rodeo-comment --project-ref <ref>
 // Secret: supabase secrets set TURNSTILE_SECRET=... --project-ref <ref>
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.0';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -63,7 +63,8 @@ Deno.serve(async (req) => {
     const verified = await verifyTurnstile(turnstileToken, req.headers.get('cf-connecting-ip'));
     if (!verified) return json(403, { ok: false, error: 'Turnstile verification failed' });
   } catch (err) {
-    return json(500, { ok: false, error: err instanceof Error ? err.message : 'Turnstile check failed' });
+    console.error('rodeo-comment: Turnstile check failed', err);
+    return json(500, { ok: false, error: 'Turnstile check failed' });
   }
 
   const supabase = createClient(
@@ -76,7 +77,10 @@ Deno.serve(async (req) => {
     body,
     published: false,
   });
-  if (error) return json(500, { ok: false, error: error.message });
+  if (error) {
+    console.error('rodeo-comment: insert failed', error);
+    return json(500, { ok: false, error: 'Could not save comment' });
+  }
 
   return json(200, { ok: true });
 });

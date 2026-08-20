@@ -6,7 +6,7 @@
 // so a wrong guess can't be diffed against a right one to leak it.
 //
 // Deploy: supabase functions deploy bigchill-make-accusation --project-ref dwvsniafixisrfrszjjr
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.0';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -60,7 +60,10 @@ Deno.serve(async (req) => {
     .select('value')
     .eq('key', 'culprit_id')
     .single();
-  if (secretError || !secret) return json(500, { error: 'Culprit id is not configured' });
+  if (secretError || !secret) {
+    console.error('bigchill-make-accusation: culprit secret lookup failed', secretError);
+    return json(500, { error: 'Culprit id is not configured' });
+  }
 
   const correct = secret.value === suspectId;
 
@@ -69,7 +72,10 @@ Deno.serve(async (req) => {
     suspect_id: suspectId,
     correct,
   });
-  if (insertError) return json(500, { error: insertError.message });
+  if (insertError) {
+    console.error('bigchill-make-accusation: accusation insert failed', insertError);
+    return json(500, { error: 'Could not record accusation' });
+  }
 
   return json(200, { correct });
 });

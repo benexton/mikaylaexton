@@ -28,11 +28,13 @@ create table if not exists public.bigchill_secrets (
 
 alter table public.bigchill_secrets enable row level security;
 
--- Seed the culprit id. If the mystery is ever rerun for another group with a
--- different culprit, update this row (and game.config.js's clearedBy
--- markers) together.
-insert into public.bigchill_secrets (key, value) values ('culprit_id', 'bottler')
-  on conflict (key) do update set value = excluded.value;
+-- Seed the culprit id directly in the Supabase SQL editor - never commit the
+-- real value to this file, since anyone can read it in the public repo.
+-- Run by hand:
+--   insert into public.bigchill_secrets (key, value) values ('culprit_id', '<id>')
+--     on conflict (key) do update set value = excluded.value;
+-- If the mystery is ever rerun for another group with a different culprit,
+-- update this row (and game.config.js's clearedBy markers) together.
 
 -- 2. Accusations ------------------------------------------------------------
 -- One row per guess. user_id is the anonymous auth user

@@ -6,3 +6,8 @@ dist
 supabase/.temp
 public/treeviewer/trees-raw.geojson
 scripts/.geodata-cache
+
+# Real play codes / source doc for The Big Chill - already seeded into the
+# live DB, never re-add these with real values (see supabase/bigchill_schema.sql).
+supabase/bigchill_passwords_seed.sql
+docs/Big-Chill-pw.pdf

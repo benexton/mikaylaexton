@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { rodeo, RODEO_SNAPSHOT_URL, RODEO_COMMENT_FN_URL, RODEO_TURNSTILE_SITE_KEY, RODEO_ANON_KEY, TEAMS, COLLECTIVE_COLOR } from './rodeoSupabase.js';
 
 const INTRO = [
@@ -74,7 +75,7 @@ function legTime(u) {
   const h = Math.floor(u.duration_minutes / 60), m = u.duration_minutes % 60;
   return `${h ? h + 'h' : ''}${m ? ' ' + m + 'm' : (h ? '' : '0m')}`.trim();
 }
-function html(md) { return { __html: marked.parse(md || '') }; }
+function html(md) { return { __html: DOMPurify.sanitize(marked.parse(md || '')) }; }
 
 function fmtNzd(minor) {
   return `$${((minor ?? 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;

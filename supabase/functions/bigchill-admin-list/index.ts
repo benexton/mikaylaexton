@@ -7,7 +7,8 @@
 // identity is never itself the check - admin_password is.
 //
 // Deploy: supabase functions deploy bigchill-admin-list --project-ref dwvsniafixisrfrszjjr
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// Secret: supabase secrets set ADMIN_PASSWORD=... --project-ref dwvsniafixisrfrszjjr
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.0';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -15,7 +16,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const ADMIN_PASSWORD = 'frozen1';
+const ADMIN_PASSWORD = Deno.env.get('ADMIN_PASSWORD');
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
     return json(400, { error: 'Invalid JSON body' });
   }
 
-  if (payload.admin_password !== ADMIN_PASSWORD) {
+  if (!ADMIN_PASSWORD || payload.admin_password !== ADMIN_PASSWORD) {
     return json(401, { error: 'Wrong password' });
   }
 
@@ -60,6 +61,9 @@ Deno.serve(async (req) => {
     .select('code, used_at, elapsed_seconds')
     .order('code', { ascending: true });
 
-  if (error) return json(500, { error: error.message });
+  if (error) {
+    console.error('bigchill-admin-list: passwords select failed', error);
+    return json(500, { error: 'Could not load codes' });
+  }
   return json(200, { passwords: data });
 });

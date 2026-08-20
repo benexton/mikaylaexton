@@ -6,7 +6,7 @@
 // certificate screen, which already has the time client-side.
 //
 // Deploy: supabase functions deploy bigchill-record-time --project-ref dwvsniafixisrfrszjjr
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.0';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -62,6 +62,9 @@ Deno.serve(async (req) => {
     .not('used_at', 'is', null)
     .select('code');
 
-  if (error) return json(500, { error: error.message });
+  if (error) {
+    console.error('bigchill-record-time: update failed', error);
+    return json(500, { error: 'Could not record time' });
+  }
   return json(200, { ok: Boolean(data && data.length > 0) });
 });
