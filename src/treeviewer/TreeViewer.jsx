@@ -206,7 +206,7 @@ export default function TreeViewer() {
             checked={excludeCCCReserve}
             onChange={() => setExcludeCCCReserve((v) => !v)}
           />
-          <span>Exclude trees in parks, reserves, and river margins</span>
+          <span>Exclude trees in parks, reserves, river margins and state highways</span>
         </label>
 
         {excludeCCCReserve && depletionYears != null && (

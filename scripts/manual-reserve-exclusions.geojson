@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "source": "manual-exclusion",
+        "reason": "Tiny (82m2) unlabeled CCC-titled sliver near Humboldt Street (TitleNo 546435, Parcel_ID 7325745) - shape (49.4m perimeter for 82m2) indicates a walkway/access strip, not a park, but was passing the CRoSL Managed_By check and wrongly excluding nearby street trees",
+        "TitleNo": "546435",
+        "Parcel_ID": 7325745
+      },
+      "geometry": { "type": "Point", "coordinates": [172.642766, -43.549598] }
+    }
+  ]
+}

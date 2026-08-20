@@ -24,14 +24,25 @@ const root = join(__dirname, '..');
 const cacheDir = join(__dirname, '.geodata-cache');
 const treesPath = join(root, 'public/treeviewer/board-trees.geojson');
 
-// Same threshold as compute-reserve-flag.mjs, for a fair side-by-side
-// comparison between the two approaches.
-const NEARBY_THRESHOLD_M = 20;
+// A board-wide audit of all proximity-only (non-inside) matches found the
+// distance histogram bottoms out at 8-10m then climbs back up toward 20m -
+// the climb is trees on the far side of a road from a park (NZ suburban
+// road+verge widths commonly land in the 15-20m band), not trees genuinely
+// adjacent to one. 10m sits at that trough: it keeps the genuine near-edge
+// matches while dropping the across-the-road false positives (e.g. Cameron
+// St, Austin St, tree 31582 near Humboldt St/Jacksons Creek).
+const NEARBY_THRESHOLD_M = 10;
 
 console.log('Loading geodata...');
 const crslRaw = JSON.parse(readFileSync(join(cacheDir, 'crsl.geojson'), 'utf-8')).features;
 const roads = JSON.parse(readFileSync(join(cacheDir, 'roads.geojson'), 'utf-8')).features;
 const manualAdditions = JSON.parse(readFileSync(join(root, 'scripts/manual-reserve-additions.geojson'), 'utf-8')).features;
+// Opposite of manualAdditions: specific CRoSL parcels confirmed NOT to be a
+// real park/reserve despite passing the Managed_By check (e.g. a tiny
+// unlabeled CCC-titled walkway strip near Humboldt Street that was wrongly
+// excluding nearby street trees) - a point inside the parcel to exclude.
+const manualExclusionPoints = JSON.parse(readFileSync(join(root, 'scripts/manual-reserve-exclusions.geojson'), 'utf-8')).features
+  .map((f) => f.geometry.coordinates);
 // The actual river channel polygon (CCC's own watercourse asset data) rather
 // than relying on whoever legally manages the land beside it - CRoSL's land-
 // parcel coverage along the riverbanks turned out to be patchy even with
@@ -202,6 +213,21 @@ crslRaw.forEach((f, i) => {
     roadCorridorIndices.add(i);
   }
 });
+
+// Drainage/stormwater parcels are a mixed bag: some are genuinely gazetted
+// "Local Purpose (Drainage) Reserve" - real reserve land, keep those - while
+// others are plain Public Works Act easement transfers ("LAND FOR DRAINAGE
+// PURPOSES...TRANSFERRED TO CHRISTCHURCH CITY COUNCIL", "DRAINAGE WORKS...")
+// with no reserve classification at all, i.e. a stormwater pipe corridor
+// under someone's back fence, not parkland. The word "RESERVE" is what
+// distinguishes them in practice across every example checked.
+const utilityEasementIndices = new Set();
+crslRaw.forEach((f, i) => {
+  const sa = (f.properties.Statutory_Actions || '').toUpperCase();
+  if (sa.includes('DRAINAGE') && !sa.includes('RESERVE')) {
+    utilityEasementIndices.add(i);
+  }
+});
 const smallParcelIndices = new Set(
   crslRaw.map((f, i) => i).filter((i) => approxAreaM2(crslRaw[i].geometry) <= ROAD_STRIP_MAX_AREA_M2)
 );
@@ -221,9 +247,19 @@ for (const r of roads) {
   }
 }
 console.log(`${roadMidpointsChecked} road-segment midpoints checked; ${roadCorridorIndices.size}/${crslRaw.length} CRoSL parcels identified as road corridors and excluded.`);
+console.log(`${utilityEasementIndices.size} CRoSL parcels identified as non-reserve drainage/utility easements and excluded.`);
 
-const crsl = crslRaw.filter((_, i) => !roadCorridorIndices.has(i)).concat(manualAdditions, riverSegments);
-console.log(`${crsl.length} genuine park/reserve/river parcels (CRoSL minus road corridors, plus manual additions and the river channel).`);
+const manualExclusionIndices = new Set(
+  crslRaw.map((f, i) => i).filter((i) =>
+    manualExclusionPoints.some(([lng, lat]) => pointInGeometry(lng, lat, crslRaw[i].geometry))
+  )
+);
+console.log(`${manualExclusionIndices.size} CRoSL parcels manually excluded (confirmed not real parks despite passing Managed_By).`);
+
+const crsl = crslRaw
+  .filter((_, i) => !roadCorridorIndices.has(i) && !utilityEasementIndices.has(i) && !manualExclusionIndices.has(i))
+  .concat(manualAdditions, riverSegments);
+console.log(`${crsl.length} genuine park/reserve/river parcels (CRoSL minus road corridors, utility easements, and manual exclusions, plus manual additions and the river channel).`);
 const reserveGrid = buildGridIndex(crsl);
 
 // Confirmed on the ground (user review) as entirely reserve/park-adjacent
