@@ -190,8 +190,8 @@ export default function TreeViewer() {
       </button>
 
       <div className={`tv-panel ${panelOpen ? 'tv-panel-open' : ''}`}>
-        <h1>Waihoro Spreydon-Cashmere-Heathcote Community Board Street Trees</h1>
-        <p className="tv-subtitle">Christchurch City Council open data</p>
+        <h1>Waihoro Spreydon-Cashmere-Heathcote Community Board Area Trees</h1>
+        <p className="tv-subtitle">Sourced from Christchurch City Council open data</p>
 
         <div className="tv-location-select">
           <label htmlFor="tv-location">Location</label>
@@ -206,7 +206,7 @@ export default function TreeViewer() {
             checked={excludeCCCReserve}
             onChange={() => setExcludeCCCReserve((v) => !v)}
           />
-          <span>Exclude trees in parks, reserves, river margins and state highways</span>
+          <span>Exclude trees in parks, reserves, river margins and state highways (leaving street trees only)</span>
         </label>
 
         {excludeCCCReserve && depletionYears != null && (
