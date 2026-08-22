@@ -243,3 +243,10 @@ create policy "rodeo comments moderate" on public.rodeo_comments
 drop policy if exists "rodeo comments delete" on public.rodeo_comments;
 create policy "rodeo comments delete" on public.rodeo_comments
   for delete to authenticated using (true);
+
+-- 11. Best/worst meal (idempotent add) ---------------------------------------
+-- Free text, one of each per update. Left null when a team didn't file one -
+-- that's the only "N/A" state; the public export and viewer both just omit
+-- the field entirely when it's null rather than showing it empty.
+alter table public.rodeo_updates add column if not exists best_meal text;
+alter table public.rodeo_updates add column if not exists worst_meal text;

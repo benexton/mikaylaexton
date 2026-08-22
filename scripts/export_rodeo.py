@@ -117,7 +117,8 @@ def main():
                               "order": "leg_no.asc"})
     updates = get("rodeo_updates", {
         "select": "id,leg_id,team,title,body,money_minor,currency,money_nzd_minor,duration_minutes,"
-                  "countries,place_city,place_country,lat,lng,arrived_at,photos,submitted_by",
+                  "countries,place_city,place_country,lat,lng,arrived_at,photos,submitted_by,"
+                  "best_meal,worst_meal",
         "published": "eq.true",
     })
     # Waypoints have no published flag of their own - visibility inherits from
@@ -165,6 +166,8 @@ def main():
                     "arrived_at": u.get("arrived_at"),
                     "photos": u.get("photos") or [],
                     "submitted_by": u.get("submitted_by"),
+                    "best_meal": u.get("best_meal"),
+                    "worst_meal": u.get("worst_meal"),
                     "waypoints": [
                         {
                             "title": w.get("title"),

@@ -6,7 +6,7 @@ import { geocodePlace } from './geocode.js';
 const LEG_SELECT = 'id,leg_no,scope,from_place,to_place,envelope_opened_at';
 const UPD_SELECT =
   'id,leg_id,team,title,body,money_minor,currency,money_nzd_minor,duration_minutes,countries,' +
-  'place_city,place_country,lat,lng,arrived_at,photos,published';
+  'place_city,place_country,lat,lng,arrived_at,photos,published,best_meal,worst_meal';
 const WP_SELECT =
   'id,update_id,leg_id,team,title,body,place_city,place_country,lat,lng,arrived_at,photos,sort_order';
 const CMT_SELECT =
@@ -61,6 +61,7 @@ function blankUpdate() {
     id: null, title: '', body: '', dollars: '', currency: 'USD',
     hours: '', minutes: '', countries: [],
     city: '', country: '', lat: '', lng: '', geoStatus: '',
+    bestMeal: '', bestMealNA: false, worstMeal: '', worstMealNA: false,
     photos: [], published: false,
   };
 }
@@ -121,6 +122,8 @@ export default function RodeoInput({ team, teamName, signOut }) {
       city: existing.place_city ?? '', country: existing.place_country ?? '',
       lat: existing.lat ?? '', lng: existing.lng ?? '',
       geoStatus: existing.lat != null && existing.lng != null ? 'Located.' : '',
+      bestMeal: existing.best_meal ?? '', bestMealNA: false,
+      worstMeal: existing.worst_meal ?? '', worstMealNA: false,
       photos: existing.photos ?? [],
       published: !!existing.published,
     });
@@ -225,6 +228,8 @@ export default function RodeoInput({ team, teamName, signOut }) {
       place_country: form.country.trim() || null,
       lat: form.lat === '' ? null : parseFloat(form.lat),
       lng: form.lng === '' ? null : parseFloat(form.lng),
+      best_meal: form.bestMealNA ? null : (form.bestMeal.trim() || null),
+      worst_meal: form.worstMealNA ? null : (form.worstMeal.trim() || null),
       photos: form.photos,
       published: form.published,
       submitted_by: teamName,
@@ -462,6 +467,35 @@ export default function RodeoInput({ team, teamName, signOut }) {
               </div>
             </div>
             {form.geoStatus && <p className="rodeo-fx-preview">{form.geoStatus}</p>}
+
+            <div className="rodeo-grid2">
+              <div>
+                <label>Best meal of the leg</label>
+                <div className="rodeo-inline">
+                  <input value={form.bestMeal} disabled={form.bestMealNA}
+                    onChange={(e) => setForm({ ...form, bestMeal: e.target.value })}
+                    placeholder="e.g. Grandma's tagine in Fes" />
+                  <label className="rodeo-check">
+                    <input type="checkbox" checked={form.bestMealNA}
+                      onChange={(e) => setForm({ ...form, bestMealNA: e.target.checked, bestMeal: e.target.checked ? '' : form.bestMeal })} />
+                    N/A
+                  </label>
+                </div>
+              </div>
+              <div>
+                <label>Worst meal of the leg</label>
+                <div className="rodeo-inline">
+                  <input value={form.worstMeal} disabled={form.worstMealNA}
+                    onChange={(e) => setForm({ ...form, worstMeal: e.target.value })}
+                    placeholder="e.g. The mystery kebab in Sofia" />
+                  <label className="rodeo-check">
+                    <input type="checkbox" checked={form.worstMealNA}
+                      onChange={(e) => setForm({ ...form, worstMealNA: e.target.checked, worstMeal: e.target.checked ? '' : form.worstMeal })} />
+                    N/A
+                  </label>
+                </div>
+              </div>
+            </div>
 
             <label>Photos</label>
             <input type="file" accept="image/*" capture="environment" multiple onChange={onPhotos} />

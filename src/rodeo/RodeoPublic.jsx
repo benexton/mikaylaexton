@@ -416,6 +416,12 @@ export default function RodeoPublic() {
                     <span className="rodeo-leg-tag">Leg {leg.leg_no} · together</span>
                     <h3>{leg.to_place}{u?.title ? `: ${u.title}` : ''}</h3>
                     {u?.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(u.body)} />}
+                    {(u?.best_meal || u?.worst_meal) && (
+                      <div className="rodeo-stats">
+                        {u.best_meal && <span>🍽️ Best: {u.best_meal}</span>}
+                        {u.worst_meal && <span>🤢 Worst: {u.worst_meal}</span>}
+                      </div>
+                    )}
                     <PhotoThumb photos={u?.photos} />
                     <span className="rodeo-nopoints">reunion leg · no points</span>
                   </div>
@@ -441,6 +447,8 @@ export default function RodeoPublic() {
                             {money(u) && <span>💸 {money(u)}</span>}
                             {legTime(u) && <span>⏱ {legTime(u)}</span>}
                             {u.countries?.length > 0 && <span>🌍 {u.countries.length}</span>}
+                            {u.best_meal && <span>🍽️ Best: {u.best_meal}</span>}
+                            {u.worst_meal && <span>🤢 Worst: {u.worst_meal}</span>}
                           </div>
                           {u.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(u.body)} />}
                           <PhotoThumb photos={u.photos} />
@@ -619,6 +627,8 @@ function LegDetail({ leg, onClose }) {
                     {money(u) && <span>💸 {money(u)}</span>}
                     {legTime(u) && <span>⏱ {legTime(u)}</span>}
                     {u.countries?.length > 0 && <span>🌍 {u.countries.join(', ')}</span>}
+                    {u.best_meal && <span>🍽️ Best: {u.best_meal}</span>}
+                    {u.worst_meal && <span>🤢 Worst: {u.worst_meal}</span>}
                   </div>
                   {u.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(u.body)} />}
                   <PhotoCarousel photos={u.photos} />
