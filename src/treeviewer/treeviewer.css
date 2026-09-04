@@ -147,19 +147,6 @@ body {
   cursor: pointer;
 }
 
-.tv-projection {
-  margin: 0 0 0.85rem;
-  padding: 0.6rem 0.7rem;
-  border-radius: 8px;
-  background: #fdf1ea;
-  border: 1px solid #f0d9c8;
-  color: #8a3f1d;
-  font-size: 0.8rem;
-  line-height: 1.4;
-}
-
-.tv-projection strong { font-weight: 700; }
-
 .tv-checkbox-row input { margin-top: 0.15rem; flex: none; accent-color: var(--tv-ink); }
 
 .tv-toggles {

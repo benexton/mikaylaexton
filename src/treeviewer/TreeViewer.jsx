@@ -105,22 +105,6 @@ export default function TreeViewer() {
     return Object.fromEntries(CATEGORIES.map((c) => [c.key, featuresByCategory[c.key].length]));
   }, [featuresByCategory]);
 
-  // Straight-line projection from the last 10 years' net change (removed
-  // minus planted, both since 2016) applied to the current established-tree
-  // stock, run out to zero. "current" here deliberately means the pre-2016
-  // established count only, not current+planted-since-2016 - young
-  // replacement plantings aren't equivalent mature canopy for decades, which
-  // is the whole point of the underlying submission this tool supports.
-  const depletionYears = useMemo(() => {
-    if (!counts) return null;
-    const current = counts['current'];
-    const removed = counts['removed-since-2016'];
-    const planted = counts['planted-since-2016'];
-    const annualNetLoss = (removed - planted) / 10;
-    if (annualNetLoss <= 0 || current <= 0) return null;
-    return Math.round(current / annualNetLoss);
-  }, [counts]);
-
   const wardStyleFor = (wardName) => (wardName === selectedLocation ? WARD_STYLE_ACTIVE : WARD_STYLE);
 
   // Fit/zoom follows the location picker: whole board, one ward, or Sydenham.
@@ -141,7 +125,7 @@ export default function TreeViewer() {
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          url={`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${import.meta.env.VITE_CARTO_API_KEY}`}
           subdomains="abcd"
           maxZoom={20}
         />
@@ -216,12 +200,6 @@ export default function TreeViewer() {
           />
           <span>Exclude trees in parks, reserves, river margins and state highways (leaving street trees only)</span>
         </label>
-
-        {excludeCCCReserve && depletionYears != null && (
-          <p className="tv-projection">
-            For the current region, at the current rate, no street trees will remain in <strong>{depletionYears} years</strong>.
-          </p>
-        )}
 
         <div className="tv-toggles">
           {CATEGORIES.map((c) => (
