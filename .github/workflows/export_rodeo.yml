@@ -1,11 +1,12 @@
 name: Publish Rodeo snapshot
 
 # Reads published updates from the RODEO Supabase project with its service role,
-# computes the scoreboard, and upserts one JSON file to Storage. Run on demand.
+# computes the scoreboard, and upserts one JSON file to Storage. Runs every
+# 30 minutes (GitHub may delay scheduled runs a little), or on demand.
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '0 */6 * * *'   # optional refresh while travelling
+  schedule:
+    - cron: '*/30 * * * *'
 
 concurrency:
   group: export-rodeo

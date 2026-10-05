@@ -12,7 +12,7 @@ const INTRO = [
     body: (
       <>
         <p>Welcome to The Rodeo. A stack of sealed envelopes control our life across a continent over the next 3 weeks.</p>
-        <p>At each stop we tear open an envelope, learn our next destination, and split into two teams: Ben &amp; John versus Miki &amp; Bruce. Each pair races there however they dare. Cheapest pair wins a point. Fastest pair wins a point. Every country we drag ourselves through is worth one more.</p>
+        <p>At each stop we tear open an envelope, learn our next destination, and split into two teams: Ben &amp; John versus Miki &amp; Bruce. Each pair races there however they dare. Fastest pair wins two points. Cheapest pair wins one. Every country we drag ourselves through is worth one more.</p>
         <p>Then we reunite, compare disasters, and open the next envelope. Casablanca to Constantinople, six different legs, three weeks, and one Bosphorus at the end.</p>
       </>
     ),
@@ -21,7 +21,7 @@ const INTRO = [
     mobileBody: (
       <>
         <p>Sealed envelopes control our life across a continent for the next 3 weeks.</p>
-        <p>Each stop we open one, learn the destination, and split into two teams: Ben &amp; John vs Miki &amp; Bruce. Cheapest pair, fastest pair, and every country crossed each win a point.</p>
+        <p>Each stop we open one, learn the destination, and split into two teams: Ben &amp; John vs Miki &amp; Bruce. Fastest pair wins 2 points; cheapest pair and every country crossed win 1 each.</p>
         <p>Then we reunite and open the next envelope. Casablanca to Constantinople, six legs, one Bosphorus at the end.</p>
       </>
     ),
@@ -64,12 +64,6 @@ function useIsMobile() {
   return mobile;
 }
 
-function money(u) {
-  if (u?.money_minor == null) return null;
-  const amt = `${(u.money_minor / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })} ${u.currency || ''}`.trim();
-  if (u.money_nzd_minor == null || (u.currency || '').toUpperCase() === 'NZD') return amt;
-  return `${amt} (≈ NZD $${(u.money_nzd_minor / 100).toLocaleString(undefined, { minimumFractionDigits: 0 })})`;
-}
 function legTime(u) {
   if (u?.duration_minutes == null) return null;
   const h = Math.floor(u.duration_minutes / 60), m = u.duration_minutes % 60;
@@ -77,16 +71,18 @@ function legTime(u) {
 }
 function html(md) { return { __html: DOMPurify.sanitize(marked.parse(md || '')) }; }
 
-function fmtNzd(minor) {
-  return `$${((minor ?? 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+// Raw spend never reaches the snapshot - only this per-leg comparison does.
+function spendLine(summary) {
+  if (!summary) return null;
+  const amt = Math.round((summary.per_person_nzd_minor ?? 0) / 100);
+  if (!summary.more || amt === 0) return 'Both pairs spent about the same per person on this leg';
+  return `${TEAMS[summary.more].name} spent NZ$${amt.toLocaleString()} more per person on this leg`;
 }
 
-// Points-by-category and running spend, shown above the timeline.
+// Points by category, shown above the timeline.
 function ScoreboardBreakdown({ data }) {
   const breakdown = data.scoreboard_breakdown;
-  const spend = data.spend_nzd_minor;
-  const shared = data.shared_spend_nzd_minor;
-  if (!breakdown && !spend) return null;
+  if (!breakdown) return null;
   return (
     <div className="rodeo-scorecard">
       {['ben', 'miki'].map((tk) => {
@@ -95,17 +91,13 @@ function ScoreboardBreakdown({ data }) {
           <div key={tk} className="rodeo-scorecard-team" style={{ borderColor: TEAMS[tk].color }}>
             <h3 style={{ color: TEAMS[tk].color }}>{TEAMS[tk].name}</h3>
             <div className="rodeo-scorecard-pts">
-              <span>💸 {b?.money ?? 0} cheapest</span>
-              <span>⏱ {b?.time ?? 0} fastest</span>
-              <span>🌍 {b?.countries ?? 0} countries</span>
+              <span>⏱ {b?.time ?? 0} pts fastest</span>
+              <span>💸 {b?.money ?? 0} pts cheapest</span>
+              <span>🌍 {b?.countries ?? 0} pts countries</span>
             </div>
-            <div className="rodeo-scorecard-spend">Spent so far: {fmtNzd(spend?.[tk])} NZD</div>
           </div>
         );
       })}
-      {shared > 0 && (
-        <p className="rodeo-scorecard-shared">+ {fmtNzd(shared)} NZD spent together, not attributed to either team</p>
-      )}
     </div>
   );
 }
@@ -444,7 +436,6 @@ export default function RodeoPublic() {
                           </div>
                           {u.title && <h3>{u.title}</h3>}
                           <div className="rodeo-stats">
-                            {money(u) && <span>💸 {money(u)}</span>}
                             {legTime(u) && <span>⏱ {legTime(u)}</span>}
                             {u.countries?.length > 0 && <span>🌍 {u.countries.length}</span>}
                             {u.best_meal && <span>🍽️ Best: {u.best_meal}</span>}
@@ -457,6 +448,7 @@ export default function RodeoPublic() {
                     </div>
                   );
                 })}
+                {spendLine(leg.spend_summary) && <p className="rodeo-spend-line">💸 {spendLine(leg.spend_summary)}</p>}
               </div>
             );
           })}
@@ -624,7 +616,6 @@ function LegDetail({ leg, onClose }) {
                 <div key={i} className="rodeo-detail-col" style={{ borderColor: t.color }}>
                   <h3 style={{ color: t.color }}>{t.name}</h3>
                   <div className="rodeo-stats">
-                    {money(u) && <span>💸 {money(u)}</span>}
                     {legTime(u) && <span>⏱ {legTime(u)}</span>}
                     {u.countries?.length > 0 && <span>🌍 {u.countries.join(', ')}</span>}
                     {u.best_meal && <span>🍽️ Best: {u.best_meal}</span>}
@@ -650,6 +641,7 @@ function LegDetail({ leg, onClose }) {
               );
             })}
           </div>
+          {spendLine(leg.spend_summary) && <p className="rodeo-spend-line">💸 {spendLine(leg.spend_summary)}</p>}
           <Comments legId={leg.id} />
         </div>
       </div>

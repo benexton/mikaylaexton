@@ -1,16 +1,46 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { rodeo, uploadRodeoPhoto, TEAMS } from './rodeoSupabase.js';
 import { nzdRate, toNzdMinor } from './currency.js';
 import { geocodePlace } from './geocode.js';
 
 const LEG_SELECT = 'id,leg_no,scope,from_place,to_place,envelope_opened_at';
+// Money and timing columns aren't directly readable (so neither pair can peek
+// at the other's before both finish) - they come from rodeo_figures() instead.
 const UPD_SELECT =
-  'id,leg_id,team,title,body,money_minor,currency,money_nzd_minor,duration_minutes,countries,' +
-  'place_city,place_country,lat,lng,arrived_at,photos,published,best_meal,worst_meal';
+  'id,leg_id,team,title,body,countries,place_city,place_country,lat,lng,photos,published,best_meal,worst_meal';
 const WP_SELECT =
   'id,update_id,leg_id,team,title,body,place_city,place_country,lat,lng,arrived_at,photos,sort_order';
 const CMT_SELECT =
   'id,leg_id,author_name,body,created_at,published,reply_body,replied_at,replied_by';
+
+// From the briefing pack: the core route plus the detours that may count.
+const COUNTRIES = [
+  'Morocco', 'Spain', 'France', 'Italy', 'Austria', 'Slovenia', 'Croatia', 'Bosnia & Herzegovina',
+  'Serbia', 'Hungary', 'Slovakia', 'Romania', 'Albania', 'North Macedonia', 'Greece', 'Bulgaria', 'Türkiye',
+  'Gibraltar', 'Montenegro', 'Kosovo', 'Monaco', 'San Marino', 'Vatican City',
+];
+
+// ISO timestamp <-> <input type="datetime-local"> value, in the device's own
+// time zone (slicing the ISO string directly would show UTC).
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+function fromLocalInput(v) { return v ? new Date(v).toISOString() : null; }
+
+function minutesBetween(startIso, endIso) {
+  if (!startIso || !endIso) return null;
+  return Math.round((new Date(endIso) - new Date(startIso)) / 60000);
+}
+function fmtMinutes(m) {
+  if (m == null) return '-';
+  const h = Math.floor(m / 60), mm = m % 60;
+  return h ? `${h}h ${mm}m` : `${mm}m`;
+}
+function fmtNzdMinor(minor) {
+  return minor == null ? '-' : `NZ$${(minor / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
 
 // Caption field that grows with its content instead of clipping long text.
 function AutoTextarea({ value, onChange, placeholder }) {
@@ -59,7 +89,7 @@ function CommentRow({ comment, legLabel, onTogglePublished, onSaveReply, onDelet
 function blankUpdate() {
   return {
     id: null, title: '', body: '', dollars: '', currency: 'USD',
-    hours: '', minutes: '', countries: [],
+    startedAt: null, arrivedAt: null, durationMinutes: null, countries: [],
     city: '', country: '', lat: '', lng: '', geoStatus: '',
     bestMeal: '', bestMealNA: false, worstMeal: '', worstMealNA: false,
     photos: [], published: false,
@@ -80,19 +110,25 @@ export default function RodeoInput({ team, teamName, signOut }) {
   const [wpForm, setWpForm] = useState(null); // null = waypoint editor closed
   const [wpBusy, setWpBusy] = useState(false);
   const [wpStatus, setWpStatus] = useState('');
+  const [editTimes, setEditTimes] = useState(false);
+  const [timeDraft, setTimeDraft] = useState({ start: '', arrive: '' });
+  const [now, setNow] = useState(() => Date.now());
 
   // New-leg fields
   const [newLeg, setNewLeg] = useState({ from_place: '', to_place: '', scope: 'race' });
 
   async function loadAll() {
-    const [{ data: L }, { data: U }, { data: W }, { data: C }] = await Promise.all([
+    const [{ data: L }, { data: U }, { data: F, error: fErr }, { data: W }, { data: C }] = await Promise.all([
       rodeo.from('rodeo_legs').select(LEG_SELECT).order('leg_no', { ascending: true }),
       rodeo.from('rodeo_updates').select(UPD_SELECT),
+      rodeo.rpc('rodeo_figures'),
       rodeo.from('rodeo_waypoints').select(WP_SELECT).order('sort_order', { ascending: true }),
       rodeo.from('rodeo_comments').select(CMT_SELECT).order('created_at', { ascending: false }),
     ]);
+    if (fErr) setStatus(`Could not load leg figures (${fErr.message}). Has section 12 of rodeo_schema.sql been run?`);
+    const figs = new Map((F ?? []).map((f) => [f.update_id, f]));
     setLegs(L ?? []);
-    setUpdates(U ?? []);
+    setUpdates((U ?? []).map((u) => ({ ...u, ...(figs.get(u.id) ?? {}) })));
     setWaypoints(W ?? []);
     setComments(C ?? []);
   }
@@ -102,22 +138,35 @@ export default function RodeoInput({ team, teamName, signOut }) {
   // For a race leg you write your own team's row; for a together leg, the shared row.
   const targetTeam = leg?.scope === 'together' ? null : team;
 
-  // When leg changes, prefill the form from any existing matching update.
+  const existing = useMemo(
+    () => (leg ? updates.find((u) => u.leg_id === leg.id && (leg.scope === 'together' ? u.team == null : u.team === team)) : null),
+    [leg, updates, team]
+  );
+  const otherTeam = team === 'ben' ? 'miki' : 'ben';
+  const other = useMemo(
+    () => (leg?.scope === 'race' ? updates.find((u) => u.leg_id === leg.id && u.team === otherTeam) : null),
+    [leg, updates, otherTeam]
+  );
+
+  // Prefill the form from the saved row when the leg (or which row backs it)
+  // changes - not on every reload, so starting/stopping the clock or saving a
+  // waypoint doesn't throw away a half-written story.
+  const prefilledFor = useRef('');
   useEffect(() => {
-    if (!leg) { setForm(blankUpdate()); return; }
-    const existing = updates.find(
-      (u) => u.leg_id === leg.id && (leg.scope === 'together' ? u.team == null : u.team === team)
-    );
-    if (!existing) { setForm(blankUpdate()); return; }
-    const mins = existing.duration_minutes ?? 0;
+    const key = `${leg?.id ?? ''}:${existing?.id ?? ''}`;
+    if (key === prefilledFor.current) return;
+    prefilledFor.current = key;
+    setEditTimes(false);
+    if (!leg || !existing) { setForm(blankUpdate()); return; }
     setForm({
       id: existing.id,
       title: existing.title ?? '',
       body: existing.body ?? '',
       dollars: existing.money_minor != null ? (existing.money_minor / 100).toString() : '',
       currency: existing.currency ?? 'USD',
-      hours: mins ? Math.floor(mins / 60).toString() : '',
-      minutes: mins ? (mins % 60).toString() : '',
+      startedAt: existing.started_at ?? null,
+      arrivedAt: existing.arrived_at ?? null,
+      durationMinutes: existing.duration_minutes ?? null,
       countries: existing.countries ?? [],
       city: existing.place_city ?? '', country: existing.place_country ?? '',
       lat: existing.lat ?? '', lng: existing.lng ?? '',
@@ -127,7 +176,72 @@ export default function RodeoInput({ team, teamName, signOut }) {
       photos: existing.photos ?? [],
       published: !!existing.published,
     });
-  }, [leg, updates, team]);
+  }, [leg, existing]);
+
+  // Tick the running clock while a pair is on the road.
+  const racing = !!form.startedAt && !form.arrivedAt;
+  useEffect(() => {
+    if (!racing) return;
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, [racing]);
+
+  async function startClock() {
+    if (!leg) return;
+    if (form.startedAt && !window.confirm('Restart the clock from now? This replaces your start time.')) return;
+    setBusy(true); setStatus('');
+    const startedAt = new Date().toISOString();
+    let error, id = form.id;
+    if (id) {
+      ({ error } = await rodeo.from('rodeo_updates')
+        .update({ started_at: startedAt, arrived_at: null, duration_minutes: null }).eq('id', id));
+    } else {
+      let data;
+      ({ data, error } = await rodeo.from('rodeo_updates').insert({
+        leg_id: leg.id, team: targetTeam, started_at: startedAt, submitted_by: teamName, published: false,
+      }).select('id').single());
+      id = data?.id;
+    }
+    setBusy(false);
+    if (error) { setStatus(error.message); return; }
+    prefilledFor.current = `${leg.id}:${id}`; // keep whatever's already typed
+    setForm((f) => ({ ...f, id, startedAt, arrivedAt: null, durationMinutes: null }));
+    setEditTimes(false);
+    setStatus('Clock started. Go go go!');
+    await loadAll();
+  }
+
+  async function arriveClock() {
+    if (!form.id || !form.startedAt) return;
+    setBusy(true); setStatus('');
+    const arrivedAt = new Date().toISOString();
+    const durationMinutes = minutesBetween(form.startedAt, arrivedAt);
+    const { error } = await rodeo.from('rodeo_updates')
+      .update({ arrived_at: arrivedAt, duration_minutes: durationMinutes }).eq('id', form.id);
+    setBusy(false);
+    if (error) { setStatus(error.message); return; }
+    setForm((f) => ({ ...f, arrivedAt, durationMinutes }));
+    setStatus(`Arrived in ${fmtMinutes(durationMinutes)}. Now log what you spent and the story.`);
+    await loadAll();
+  }
+
+  // Manual correction for a forgotten tap or a wrong time. Only changes the
+  // form - "Save/Update this leg" writes it, same as every other field.
+  function openTimeEditor() {
+    setTimeDraft({ start: toLocalInput(form.startedAt), arrive: toLocalInput(form.arrivedAt) });
+    setEditTimes(true);
+  }
+  function applyTimeEdit() {
+    const startedAt = fromLocalInput(timeDraft.start);
+    const arrivedAt = fromLocalInput(timeDraft.arrive);
+    if (arrivedAt && !startedAt) { setStatus('Set a start time too.'); return; }
+    const durationMinutes = minutesBetween(startedAt, arrivedAt);
+    if (durationMinutes != null && durationMinutes <= 0) { setStatus('Arrival has to be after the start.'); return; }
+    setForm((f) => ({ ...f, startedAt, arrivedAt, durationMinutes }));
+    setEditTimes(false);
+    setStatus('Times changed. Save the leg to keep them.');
+  }
 
   async function createLeg(e) {
     e.preventDefault();
@@ -205,7 +319,6 @@ export default function RodeoInput({ team, teamName, signOut }) {
   async function save() {
     if (!leg) return;
     setBusy(true); setStatus('Saving...');
-    const mins = (parseInt(form.hours || '0', 10) * 60) + parseInt(form.minutes || '0', 10);
     const currency = (form.currency || 'USD').trim().toUpperCase();
 
     let moneyNzdMinor = null, fxWarning = '';
@@ -222,7 +335,9 @@ export default function RodeoInput({ team, teamName, signOut }) {
       money_minor: form.dollars === '' ? null : Math.round(parseFloat(form.dollars) * 100),
       currency,
       money_nzd_minor: moneyNzdMinor,
-      duration_minutes: mins || null,
+      started_at: form.startedAt,
+      arrived_at: form.arrivedAt,
+      duration_minutes: minutesBetween(form.startedAt, form.arrivedAt) ?? form.durationMinutes,
       countries: form.countries,
       place_city: form.city.trim() || null,
       place_country: form.country.trim() || null,
@@ -239,7 +354,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
     else ({ error } = await rodeo.from('rodeo_updates').insert(row));
     setBusy(false);
     if (error) { setStatus(error.message); return; }
-    setStatus(`Saved. Run the "Publish Rodeo snapshot" Action to push it live.${fxWarning}`);
+    setStatus(`Saved. It goes live on the public page within about half an hour (if ticked ready).${fxWarning}`);
     await loadAll();
   }
 
@@ -250,7 +365,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
     const { error } = await rodeo.from('rodeo_updates').delete().eq('id', form.id);
     setBusy(false);
     if (error) { setStatus(error.message); return; }
-    setStatus('Deleted. Run the "Publish Rodeo snapshot" Action to push it live.');
+    setStatus('Deleted. The public page catches up within about half an hour.');
     await loadAll();
   }
 
@@ -271,7 +386,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
       city: w.place_city ?? '', country: w.place_country ?? '',
       lat: w.lat ?? '', lng: w.lng ?? '',
       geoStatus: w.lat != null && w.lng != null ? 'Located.' : '',
-      arrivedAt: w.arrived_at ? w.arrived_at.slice(0, 16) : '',
+      arrivedAt: toLocalInput(w.arrived_at),
       photos: w.photos ?? [],
     });
     setWpStatus('');
@@ -314,7 +429,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
       place_city: wpForm.city.trim() || null, place_country: wpForm.country.trim() || null,
       lat: wpForm.lat === '' ? null : parseFloat(wpForm.lat),
       lng: wpForm.lng === '' ? null : parseFloat(wpForm.lng),
-      arrived_at: wpForm.arrivedAt ? new Date(wpForm.arrivedAt).toISOString() : null,
+      arrived_at: fromLocalInput(wpForm.arrivedAt),
       photos: wpForm.photos,
     };
     let error;
@@ -408,6 +523,68 @@ export default function RodeoInput({ team, teamName, signOut }) {
                 : <>as <b style={{ color: TEAMS[team].color }}>{teamName}</b></>}.
             </p>
 
+            {leg.scope === 'race' && (
+              <div className="rodeo-clock">
+                <div className="rodeo-clock-main">
+                  {!form.startedAt && (
+                    <button type="button" className="rodeo-btn big" onClick={startClock} disabled={busy}>Start the clock</button>
+                  )}
+                  {racing && (
+                    <>
+                      <span className="rodeo-clock-time">⏱ {fmtMinutes(minutesBetween(form.startedAt, new Date(now).toISOString()))}</span>
+                      <button type="button" className="rodeo-btn big" onClick={arriveClock} disabled={busy}>We've arrived</button>
+                    </>
+                  )}
+                  {form.arrivedAt && (
+                    <span className="rodeo-clock-time">🏁 Leg time {fmtMinutes(form.durationMinutes)}</span>
+                  )}
+                  {!form.startedAt && form.durationMinutes != null && (
+                    <span className="rodeo-muted">Saved leg time: {fmtMinutes(form.durationMinutes)}</span>
+                  )}
+                </div>
+                {form.startedAt && (
+                  <p className="rodeo-fx-preview">
+                    Started {new Date(form.startedAt).toLocaleString()}
+                    {form.arrivedAt && <> · arrived {new Date(form.arrivedAt).toLocaleString()}</>}
+                  </p>
+                )}
+                {!editTimes ? (
+                  <button type="button" className="rodeo-btn ghost small" onClick={openTimeEditor}>Edit times</button>
+                ) : (
+                  <div className="rodeo-time-edit">
+                    <div className="rodeo-grid2">
+                      <div>
+                        <label>Started</label>
+                        <input type="datetime-local" value={timeDraft.start}
+                          onChange={(e) => setTimeDraft({ ...timeDraft, start: e.target.value })} />
+                      </div>
+                      <div>
+                        <label>Arrived</label>
+                        <input type="datetime-local" value={timeDraft.arrive}
+                          onChange={(e) => setTimeDraft({ ...timeDraft, arrive: e.target.value })} />
+                      </div>
+                    </div>
+                    <p className="rodeo-fx-preview">In this phone's current time zone. Leave Arrived blank if you're still going.</p>
+                    <div className="rodeo-inline">
+                      <button type="button" className="rodeo-btn small" onClick={applyTimeEdit}>Use these times</button>
+                      <button type="button" className="rodeo-btn ghost small" onClick={() => setEditTimes(false)}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+                <p className="rodeo-other-team">
+                  <b style={{ color: TEAMS[otherTeam].color }}>{TEAMS[otherTeam].name}</b>:{' '}
+                  {!other?.has_started ? 'not started yet' : (other.has_arrived ? 'arrived' : 'on the road')}
+                  {other?.revealed && (
+                    <> · {fmtMinutes(other.duration_minutes)}, {fmtNzdMinor(other.money_nzd_minor)}
+                      {' '}(you: {fmtMinutes(existing?.duration_minutes)}, {fmtNzdMinor(existing?.money_nzd_minor)})</>
+                  )}
+                </p>
+                {!other?.revealed && (
+                  <p className="rodeo-fx-preview">Their time and spend stay sealed until both pairs have arrived and logged a spend.</p>
+                )}
+              </div>
+            )}
+
             <label>Headline</label>
             <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
               placeholder="e.g. We missed the ferry" />
@@ -418,7 +595,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
 
             <div className="rodeo-grid2">
               <div>
-                <label>Money spent</label>
+                <label>Money spent (whole pair)</label>
                 <div className="rodeo-inline">
                   <input type="number" step="0.01" value={form.dollars}
                     onChange={(e) => setForm({ ...form, dollars: e.target.value })} placeholder="0.00" />
@@ -426,30 +603,26 @@ export default function RodeoInput({ team, teamName, signOut }) {
                     onChange={(e) => setForm({ ...form, currency: e.target.value })} placeholder="USD" />
                 </div>
                 {fxPreview && <p className="rodeo-fx-preview">≈ NZD ${fxPreview}</p>}
-              </div>
-              <div>
-                <label>Leg time</label>
-                <div className="rodeo-inline">
-                  <input type="number" value={form.hours}
-                    onChange={(e) => setForm({ ...form, hours: e.target.value })} placeholder="hrs" />
-                  <input type="number" value={form.minutes}
-                    onChange={(e) => setForm({ ...form, minutes: e.target.value })} placeholder="min" />
-                </div>
+                <p className="rodeo-fx-preview">Total for both of you. Never shown publicly - the site only says which pair spent more per person.</p>
               </div>
             </div>
 
             <label>Countries crossed this leg</label>
-            <div className="rodeo-chips">
-              {form.countries.map((c) => (
-                <span key={c} className="rodeo-chip">
-                  {c}<button type="button" onClick={() => setForm({ ...form, countries: form.countries.filter((x) => x !== c) })}>×</button>
-                </span>
-              ))}
+            <div className="rodeo-country-pick">
+              {[...COUNTRIES, ...form.countries.filter((c) => !COUNTRIES.includes(c))].map((c) => {
+                const on = form.countries.includes(c);
+                return (
+                  <button key={c} type="button" className={`rodeo-country${on ? ' on' : ''}`} aria-pressed={on}
+                    onClick={() => setForm((f) => ({ ...f, countries: on ? f.countries.filter((x) => x !== c) : [...f.countries, c] }))}>
+                    {on ? '✓ ' : ''}{c}
+                  </button>
+                );
+              })}
             </div>
             <div className="rodeo-inline">
               <input value={countryDraft} onChange={(e) => setCountryDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addCountry(); } }}
-                placeholder="Add a country, Enter to confirm" />
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCountry(); } }}
+                placeholder="Somewhere not on the list?" />
               <button type="button" className="rodeo-btn ghost" onClick={addCountry}>Add</button>
             </div>
 

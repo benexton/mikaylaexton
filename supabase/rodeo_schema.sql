@@ -250,3 +250,57 @@ create policy "rodeo comments delete" on public.rodeo_comments
 -- the field entirely when it's null rather than showing it empty.
 alter table public.rodeo_updates add column if not exists best_meal text;
 alter table public.rodeo_updates add column if not exists worst_meal text;
+
+-- 12. Start/arrive clock + sealed figures ------------------------------------
+-- Each pair taps "Start" when they set off and "We've arrived" at the
+-- destination; duration_minutes is derived from the two (and recomputed if
+-- either time is corrected by hand in HQ).
+alter table public.rodeo_updates add column if not exists started_at timestamptz;
+
+-- Spend and timing are sealed: a signed-in traveller can't read the OTHER
+-- pair's money or times until both pairs have finished the leg (arrived and
+-- logged a spend), so whoever files second can't just undercut. Column grants
+-- hide the sensitive columns from direct reads; rodeo_figures() hands them
+-- back only where allowed. The service role (export script) is unaffected.
+revoke select on public.rodeo_updates from anon, authenticated;
+grant select (id, created_at, updated_at, leg_id, team, title, body, countries,
+              place_city, place_country, lat, lng, photos, submitted_by,
+              published, best_meal, worst_meal)
+  on public.rodeo_updates to authenticated;
+
+create or replace function public.rodeo_figures()
+returns table (
+  update_id uuid, leg_id uuid, team rodeo_team,
+  has_started boolean, has_arrived boolean, revealed boolean,
+  money_minor int, currency text, money_nzd_minor int,
+  duration_minutes int, started_at timestamptz, arrived_at timestamptz
+)
+language sql stable security definer set search_path = public as $$
+  with done as (
+    select u.leg_id,
+           count(*) filter (
+             where u.team is not null
+               and (u.arrived_at is not null or u.duration_minutes is not null)
+               and u.money_minor is not null
+           ) = 2 as both_done
+    from rodeo_updates u
+    group by u.leg_id
+  ), vis as (
+    select u.*,
+           (u.team is null or u.team::text = rodeo_current_team() or d.both_done) as visible
+    from rodeo_updates u join done d using (leg_id)
+  )
+  select id, leg_id, team,
+         started_at is not null, arrived_at is not null or duration_minutes is not null, visible,
+         case when visible then money_minor end,
+         case when visible then currency end,
+         case when visible then money_nzd_minor end,
+         case when visible then duration_minutes end,
+         case when visible then started_at end,
+         case when visible then arrived_at end
+  from vis
+  where auth.uid() is not null
+$$;
+
+revoke all on function public.rodeo_figures() from public, anon;
+grant execute on function public.rodeo_figures() to authenticated;
