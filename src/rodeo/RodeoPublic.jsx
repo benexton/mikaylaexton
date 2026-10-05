@@ -109,7 +109,7 @@ function ScoreChips({ leg, team, u, listCountries = false }) {
       {nCountries > 0 && (
         <span className={`rodeo-score-chip${countryPts ? ' win' : ''}`}
           title={countryPts < nCountries ? 'Each country only scores the first time a pair crosses it' : 'One point per new country'}>
-          🌍 {listCountries ? countryList : `${nCountries} ${nCountries === 1 ? 'country' : 'countries'}`}
+          🌍 {listCountries ? countryList : `${countryPts} new ${countryPts === 1 ? 'country' : 'countries'}`}
           {countryPts > 0 && <b>+{countryPts}</b>}
         </span>
       )}
