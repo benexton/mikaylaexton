@@ -10,7 +10,9 @@ exactly like VERT's export_public.py.
 Scoring (race legs only; 'together' legs score nothing):
   * fastest pair that leg            -> +2
   * cheapest pair that leg           -> +1
-  * every country a pair crossed     -> +1 each (per team, own route)
+  * every NEW country a pair crossed -> +1 each (per team, own route). A
+    country scores only the first time that pair crosses it, on the earliest
+    race leg; crossing it again on a later leg earns nothing.
 Money/time points are only awarded when BOTH teams have a published update for
 that leg (you can't win a race the other pair hasn't reported yet). Money is
 compared using money_nzd_minor (spend converted to NZD at filing time), never
@@ -81,11 +83,16 @@ def score(legs, updates_by_leg):
     category (so they sum to the team's total). per_leg_spend[leg_id] is the
     spend_summary for race legs. per_leg_winners[leg_id] = {"time": team|None,
     "money": team|None} so the viewer can badge who took each award.
+
+    Also sets u["new_countries"] on each race-leg update: the subset of its
+    countries that scored (first crossing for that team). Legs must arrive in
+    leg_no order for "first" to mean first.
     """
     per_leg, totals = {}, {t: 0 for t in TEAMS}
     breakdown = {t: {"money": 0, "time": 0, "countries": 0} for t in TEAMS}
     per_leg_spend = {}
     per_leg_winners = {}
+    seen = {t: set() for t in TEAMS}   # countries each team has already scored
 
     for leg in legs:
         lid = leg["id"]
@@ -99,11 +106,17 @@ def score(legs, updates_by_leg):
         per_leg_spend[lid] = spend_summary(ups)
         won = per_leg_winners[lid] = {"time": None, "money": None}
 
-        # country points: per team, always counted from their own route
+        # country points: per team, own route, first crossing only
         for t, u in ups.items():
-            c = len(u.get("countries") or [])
-            pts[t] += c
-            breakdown[t]["countries"] += c
+            new = []
+            for c in u.get("countries") or []:
+                key = c.strip().casefold()
+                if key and key not in seen[t]:
+                    seen[t].add(key)
+                    new.append(c)
+            u["new_countries"] = new
+            pts[t] += len(new)
+            breakdown[t]["countries"] += len(new)
 
         # money + time points need both teams reporting
         if "ben" in ups and "miki" in ups:
@@ -179,6 +192,7 @@ def main():
                     "body": u.get("body"),
                     "duration_minutes": u.get("duration_minutes"),
                     "countries": u.get("countries") or [],
+                    "new_countries": u.get("new_countries"),  # the ones that scored; null on together legs
                     "place_city": u.get("place_city"), "place_country": u.get("place_country"),
                     "lat": u.get("lat"), "lng": u.get("lng"),
                     "arrived_at": u.get("arrived_at"),

@@ -12,7 +12,7 @@ const INTRO = [
     body: (
       <>
         <p>Welcome to The Rodeo. A stack of sealed envelopes control our life across a continent over the next 3 weeks.</p>
-        <p>At each stop we tear open an envelope, learn our next destination, and split into two teams: Ben &amp; John versus Miki &amp; Bruce. Each pair races there however they dare. Fastest pair wins two points. Cheapest pair wins one. Every country we drag ourselves through is worth one more.</p>
+        <p>At each stop we tear open an envelope, learn our next destination, and split into two teams: Ben &amp; John versus Miki &amp; Bruce. Each pair races there however they dare. Fastest pair wins two points. Cheapest pair wins one. Every new country we drag ourselves through is worth one more (each country only scores once).</p>
         <p>Then we reunite, compare disasters, and open the next envelope. Casablanca to Constantinople, six different legs, three weeks, and one Bosphorus at the end.</p>
       </>
     ),
@@ -21,7 +21,7 @@ const INTRO = [
     mobileBody: (
       <>
         <p>Sealed envelopes control our life across a continent for the next 3 weeks.</p>
-        <p>Each stop we open one, learn the destination, and split into two teams: Ben &amp; John vs Miki &amp; Bruce. Fastest pair wins 2 points; cheapest pair and every country crossed win 1 each.</p>
+        <p>Each stop we open one, learn the destination, and split into two teams: Ben &amp; John vs Miki &amp; Bruce. Fastest pair wins 2 points; cheapest pair and every new country crossed win 1 each.</p>
         <p>Then we reunite and open the next envelope. Casablanca to Constantinople, six legs, one Bosphorus at the end.</p>
       </>
     ),
@@ -85,11 +85,15 @@ const MONEY_PTS = 1;
 
 // How a team scored this leg. Anything that earned points is ringed in gold
 // with its +points: the time (only when fastest), a trophy for the cheapest
-// pair, and the countries crossed.
+// pair, and the countries crossed (only first-time crossings score).
 function ScoreChips({ leg, team, u, listCountries = false }) {
   const won = leg.winners ?? {};
   const time = legTime(u);
   const nCountries = u.countries?.length ?? 0;
+  // Older snapshots predate new_countries, when every crossing scored.
+  const scored = u.new_countries ?? u.countries ?? [];
+  const countryPts = scored.length;
+  const countryList = (u.countries ?? []).map((c) => (scored.includes(c) ? c : `${c} (again)`)).join(', ');
   if (!time && !nCountries && won.money !== team) return null;
   return (
     <div className="rodeo-score-chips">
@@ -103,8 +107,10 @@ function ScoreChips({ leg, team, u, listCountries = false }) {
         <span className="rodeo-score-chip win" title="Cheapest pair this leg">🏆 Cheapest<b>+{MONEY_PTS}</b></span>
       )}
       {nCountries > 0 && (
-        <span className="rodeo-score-chip win" title="One point per country crossed">
-          🌍 {listCountries ? u.countries.join(', ') : `${nCountries} ${nCountries === 1 ? 'country' : 'countries'}`}<b>+{nCountries}</b>
+        <span className={`rodeo-score-chip${countryPts ? ' win' : ''}`}
+          title={countryPts < nCountries ? 'Each country only scores the first time a pair crosses it' : 'One point per new country'}>
+          🌍 {listCountries ? countryList : `${nCountries} ${nCountries === 1 ? 'country' : 'countries'}`}
+          {countryPts > 0 && <b>+{countryPts}</b>}
         </span>
       )}
     </div>
