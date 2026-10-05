@@ -246,3 +246,10 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-country-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .rodeo-country { font: inherit; font-size: .86rem; background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 20px; padding: 5px 11px; cursor: pointer; }
 .rodeo-country.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* per-leg scoring chips: winning time circled, trophy for cheapest, +points */
+.rodeo-score-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+.rodeo-score-chip { display: inline-flex; align-items: center; gap: 6px; font-size: .86rem; color: var(--ink-soft); background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 3px 10px; }
+.rodeo-score-chip b { font-size: .76rem; font-weight: 700; color: var(--ink); background: var(--line); border-radius: 10px; padding: 0 6px; }
+.rodeo-score-chip.win { color: var(--ink); font-weight: 600; border: 2px solid var(--gold); background: #fff8e3; box-shadow: 0 0 0 3px rgba(201, 162, 39, .18); }
+.rodeo-score-chip.win b { background: var(--gold); color: #fff; }

@@ -75,15 +75,17 @@ def spend_summary(ups):
 
 
 def score(legs, updates_by_leg):
-    """Return (per_leg_points, totals, breakdown, per_leg_spend).
+    """Return (per_leg_points, totals, breakdown, per_leg_spend, per_leg_winners).
 
     breakdown[team] = {"money": n, "time": n, "countries": n} POINTS by
     category (so they sum to the team's total). per_leg_spend[leg_id] is the
-    spend_summary for race legs.
+    spend_summary for race legs. per_leg_winners[leg_id] = {"time": team|None,
+    "money": team|None} so the viewer can badge who took each award.
     """
     per_leg, totals = {}, {t: 0 for t in TEAMS}
     breakdown = {t: {"money": 0, "time": 0, "countries": 0} for t in TEAMS}
     per_leg_spend = {}
+    per_leg_winners = {}
 
     for leg in legs:
         lid = leg["id"]
@@ -95,6 +97,7 @@ def score(legs, updates_by_leg):
             continue
 
         per_leg_spend[lid] = spend_summary(ups)
+        won = per_leg_winners[lid] = {"time": None, "money": None}
 
         # country points: per team, always counted from their own route
         for t, u in ups.items():
@@ -107,11 +110,13 @@ def score(legs, updates_by_leg):
             mb, mm = money_nzd(ups["ben"]), money_nzd(ups["miki"])
             if mb is not None and mm is not None and mb != mm:
                 winner = "ben" if mb < mm else "miki"
+                won["money"] = winner
                 pts[winner] += MONEY_POINTS
                 breakdown[winner]["money"] += MONEY_POINTS
             tb, tm = minutes(ups["ben"]), minutes(ups["miki"])
             if tb is not None and tm is not None and tb != tm:
                 winner = "ben" if tb < tm else "miki"
+                won["time"] = winner
                 pts[winner] += TIME_POINTS
                 breakdown[winner]["time"] += TIME_POINTS
 
@@ -119,7 +124,7 @@ def score(legs, updates_by_leg):
         for t in TEAMS:
             totals[t] += pts[t]
 
-    return per_leg, totals, breakdown, per_leg_spend
+    return per_leg, totals, breakdown, per_leg_spend, per_leg_winners
 
 
 def main():
@@ -152,7 +157,7 @@ def main():
     for u in updates:
         updates_by_leg.setdefault(u["leg_id"], []).append(u)
 
-    per_leg, totals, breakdown, per_leg_spend = score(legs, updates_by_leg)
+    per_leg, totals, breakdown, per_leg_spend, per_leg_winners = score(legs, updates_by_leg)
 
     out_legs = []
     for leg in legs:
@@ -166,6 +171,7 @@ def main():
             "envelope_opened_at": leg.get("envelope_opened_at"),
             "points": per_leg.get(lid, {}),
             "spend_summary": per_leg_spend.get(lid),
+            "winners": per_leg_winners.get(lid),
             "updates": [
                 {
                     "team": u.get("team"),               # null = collective

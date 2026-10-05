@@ -79,6 +79,38 @@ function spendLine(summary) {
   return `${TEAMS[summary.more].name} spent NZ$${amt.toLocaleString()} more per person on this leg`;
 }
 
+// Mirrors TIME_POINTS / MONEY_POINTS in scripts/export_rodeo.py.
+const TIME_PTS = 2;
+const MONEY_PTS = 1;
+
+// How a team scored this leg. Anything that earned points is ringed in gold
+// with its +points: the time (only when fastest), a trophy for the cheapest
+// pair, and the countries crossed.
+function ScoreChips({ leg, team, u, listCountries = false }) {
+  const won = leg.winners ?? {};
+  const time = legTime(u);
+  const nCountries = u.countries?.length ?? 0;
+  if (!time && !nCountries && won.money !== team) return null;
+  return (
+    <div className="rodeo-score-chips">
+      {time && (
+        <span className={`rodeo-score-chip${won.time === team ? ' win' : ''}`}
+          title={won.time === team ? 'Fastest pair this leg' : undefined}>
+          ⏱ {time}{won.time === team && <b>+{TIME_PTS}</b>}
+        </span>
+      )}
+      {won.money === team && (
+        <span className="rodeo-score-chip win" title="Cheapest pair this leg">🏆 Cheapest<b>+{MONEY_PTS}</b></span>
+      )}
+      {nCountries > 0 && (
+        <span className="rodeo-score-chip win" title="One point per country crossed">
+          🌍 {listCountries ? u.countries.join(', ') : `${nCountries} ${nCountries === 1 ? 'country' : 'countries'}`}<b>+{nCountries}</b>
+        </span>
+      )}
+    </div>
+  );
+}
+
 // Points by category, shown above the timeline.
 function ScoreboardBreakdown({ data }) {
   const breakdown = data.scoreboard_breakdown;
@@ -435,12 +467,13 @@ export default function RodeoPublic() {
                             <span className="rodeo-leg-pts">{leg.points?.[tk] ?? 0} pts</span>
                           </div>
                           {u.title && <h3>{u.title}</h3>}
-                          <div className="rodeo-stats">
-                            {legTime(u) && <span>⏱ {legTime(u)}</span>}
-                            {u.countries?.length > 0 && <span>🌍 {u.countries.length}</span>}
-                            {u.best_meal && <span>🍽️ Best: {u.best_meal}</span>}
-                            {u.worst_meal && <span>🤢 Worst: {u.worst_meal}</span>}
-                          </div>
+                          <ScoreChips leg={leg} team={tk} u={u} />
+                          {(u.best_meal || u.worst_meal) && (
+                            <div className="rodeo-stats">
+                              {u.best_meal && <span>🍽️ Best: {u.best_meal}</span>}
+                              {u.worst_meal && <span>🤢 Worst: {u.worst_meal}</span>}
+                            </div>
+                          )}
                           {u.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(u.body)} />}
                           <PhotoThumb photos={u.photos} />
                         </>
@@ -614,10 +647,11 @@ function LegDetail({ leg, onClose }) {
               const t = u.team ? TEAMS[u.team] : { name: 'Everyone', color: COLLECTIVE_COLOR };
               return (
                 <div key={i} className="rodeo-detail-col" style={{ borderColor: t.color }}>
-                  <h3 style={{ color: t.color }}>{t.name}</h3>
+                  <h3 style={{ color: t.color }}>{t.name}{u.team && leg.points ? ` · ${leg.points[u.team] ?? 0} pts` : ''}</h3>
+                  {u.team && <ScoreChips leg={leg} team={u.team} u={u} listCountries />}
                   <div className="rodeo-stats">
-                    {legTime(u) && <span>⏱ {legTime(u)}</span>}
-                    {u.countries?.length > 0 && <span>🌍 {u.countries.join(', ')}</span>}
+                    {!u.team && legTime(u) && <span>⏱ {legTime(u)}</span>}
+                    {!u.team && u.countries?.length > 0 && <span>🌍 {u.countries.join(', ')}</span>}
                     {u.best_meal && <span>🍽️ Best: {u.best_meal}</span>}
                     {u.worst_meal && <span>🤢 Worst: {u.worst_meal}</span>}
                   </div>
