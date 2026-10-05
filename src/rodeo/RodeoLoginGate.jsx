@@ -11,12 +11,48 @@ export default function RodeoLoginGate({ children }) {
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [info, setInfo] = useState('');
+  // True after arriving from a password-reset email: Supabase has signed the
+  // user in with a short-lived recovery session, and we must ask for the new
+  // password before letting them into HQ.
+  const [recovering, setRecovering] = useState(
+    () => typeof window !== 'undefined' && /type=recovery/.test(window.location.hash)
+  );
+  const [newPassword, setNewPassword] = useState('');
 
   useEffect(() => {
     rodeo.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true); });
-    const { data: sub } = rodeo.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data: sub } = rodeo.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovering(true);
+      setSession(s);
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  async function sendReset() {
+    if (!email) { setErr('Type the team email above first.'); return; }
+    setBusy(true); setErr(''); setInfo('');
+    // Must be listed under Supabase > Authentication > URL Configuration >
+    // Redirect URLs, or Supabase falls back to the project's Site URL.
+    const { error } = await rodeo.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/rodeo-hq/`,
+    });
+    setBusy(false);
+    if (error) setErr(error.message);
+    else setInfo('Reset email sent. Open the link on this device to choose a new password.');
+  }
+
+  async function setPasswordFromReset(e) {
+    e.preventDefault();
+    if (newPassword.length < 8) { setErr('Use at least 8 characters.'); return; }
+    setBusy(true); setErr('');
+    const { error } = await rodeo.auth.updateUser({ password: newPassword });
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    setRecovering(false);
+    setNewPassword('');
+    window.history.replaceState(null, '', window.location.pathname);
+  }
 
   async function signIn(e) {
     e.preventDefault();
@@ -29,6 +65,29 @@ export default function RodeoLoginGate({ children }) {
   async function signOut() { await rodeo.auth.signOut(); }
 
   if (!ready) return <div className="rodeo-loading">Saddling up...</div>;
+
+  if (session && recovering) {
+    return (
+      <div className="rodeo-login">
+        <div className="rodeo-login-card">
+          <div className="rodeo-login-brand">
+            <span className="rodeo-kicker">The Rodeo</span>
+            <h1>New password</h1>
+            <p className="rodeo-muted">Choose a new password for {session.user.email}.</p>
+          </div>
+          <form onSubmit={setPasswordFromReset}>
+            <label htmlFor="newpw">New password</label>
+            <input id="newpw" type="password" autoComplete="new-password" value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)} required />
+            <button className="rodeo-btn" type="submit" disabled={busy}>
+              {busy ? 'Saving...' : 'Save and enter'}
+            </button>
+            {err && <p className="rodeo-err">{err}</p>}
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (!session) {
     return (
@@ -50,7 +109,11 @@ export default function RodeoLoginGate({ children }) {
               {busy ? 'Signing in...' : 'Enter the arena'}
             </button>
             {err && <p className="rodeo-err">{err}</p>}
+            {info && <p className="rodeo-hint">{info}</p>}
           </form>
+          <button type="button" className="rodeo-btn ghost small" onClick={sendReset} disabled={busy}>
+            Forgot password?
+          </button>
           <p className="rodeo-hint">Two logins: one for Ben &amp; John, one for Miki &amp; Bruce.</p>
         </div>
       </div>
