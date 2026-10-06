@@ -144,7 +144,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-leg-pts { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 1px 9px; font-size: .8rem; color: var(--ink-soft); }
 .rodeo-card h3 { font-size: 1.1rem; margin-top: 6px; }
 .rodeo-stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: .9rem; color: var(--ink-soft); margin: 4px 0 8px; }
-.rodeo-body { font-size: .93rem; }
+.rodeo-body { font-size: .93rem; text-align: left; }
 .rodeo-body p { margin: .4em 0; }
 .rodeo-pending { color: var(--ink-soft); font-style: italic; }
 .rodeo-spend-line { grid-column: 1 / -1; width: fit-content; position: relative; z-index: 1; margin: 12px auto 0; background: var(--paper-2); border: 1px solid var(--line); border-radius: 20px; padding: 4px 14px; font-size: .88rem; color: var(--ink-soft); text-align: center; }
