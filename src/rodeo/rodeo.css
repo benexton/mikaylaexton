@@ -58,7 +58,6 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-writing-as { color: var(--ink-soft); font-size: .9rem; margin: 10px 0 0; }
 .rodeo-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .rodeo-inline { display: flex; gap: 8px; }
-.rodeo-cur { max-width: 70px; text-transform: uppercase; }
 .rodeo-fx-preview { font-size: .82rem; color: var(--ink-soft); margin: 5px 0 0; }
 .rodeo-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .rodeo-chip { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 3px 6px 3px 11px; font-size: .85rem; display: inline-flex; align-items: center; gap: 4px; }

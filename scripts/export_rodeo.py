@@ -76,6 +76,21 @@ def spend_summary(ups):
             "per_person_nzd_minor": diff_pp}
 
 
+def times_revealed(leg, ups):
+    """Mirrors rodeo_figures() in the schema: on a race leg, neither pair's
+    time goes public until BOTH have arrived and logged a spend - otherwise
+    whoever is still on the road could just look the other pair up here."""
+    if leg.get("scope") != "race":
+        return True
+    by_team = {u["team"]: u for u in ups if u.get("team")}
+    return all(
+        t in by_team
+        and (by_team[t].get("arrived_at") or by_team[t].get("duration_minutes") is not None)
+        and by_team[t].get("money_minor") is not None
+        for t in TEAMS
+    )
+
+
 def score(legs, updates_by_leg):
     """Return (per_leg_points, totals, breakdown, per_leg_spend, per_leg_winners).
 
@@ -175,6 +190,7 @@ def main():
     out_legs = []
     for leg in legs:
         lid = leg["id"]
+        revealed = times_revealed(leg, updates_by_leg.get(lid, []))
         out_legs.append({
             "id": lid,  # needed publicly so the comment form knows which leg to attach to
             "leg_no": leg.get("leg_no"),
@@ -190,12 +206,13 @@ def main():
                     "team": u.get("team"),               # null = collective
                     "title": u.get("title"),
                     "body": u.get("body"),
-                    "duration_minutes": u.get("duration_minutes"),
+                    "duration_minutes": u.get("duration_minutes") if revealed else None,
+                    "time_sealed": not revealed and u.get("duration_minutes") is not None,
                     "countries": u.get("countries") or [],
                     "new_countries": u.get("new_countries"),  # the ones that scored; null on together legs
                     "place_city": u.get("place_city"), "place_country": u.get("place_country"),
                     "lat": u.get("lat"), "lng": u.get("lng"),
-                    "arrived_at": u.get("arrived_at"),
+                    "arrived_at": u.get("arrived_at") if revealed else None,
                     "photos": u.get("photos") or [],
                     "submitted_by": u.get("submitted_by"),
                     "best_meal": u.get("best_meal"),

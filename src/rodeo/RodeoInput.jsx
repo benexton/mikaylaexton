@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { rodeo, uploadRodeoPhoto, TEAMS } from './rodeoSupabase.js';
-import { nzdRate, toNzdMinor } from './currency.js';
+import { rodeo, uploadRodeoPhoto, removeRodeoPhotos, droppedPhotos, TEAMS } from './rodeoSupabase.js';
+import { CURRENCIES, RATES_LOCKED_ON, currencyInfo, nzdRate, toNzdMinor } from './currency.js';
 import { geocodePlace } from './geocode.js';
 
 const LEG_SELECT = 'id,leg_no,scope,from_place,to_place,envelope_opened_at';
@@ -38,6 +38,10 @@ function fmtMinutes(m) {
   const h = Math.floor(m / 60), mm = m % 60;
   return h ? `${h}h ${mm}m` : `${mm}m`;
 }
+// Postgres unique_violation - e.g. the other pair (or your teammate's phone)
+// got there first.
+function isDuplicate(error) { return error?.code === '23505'; }
+
 function fmtNzdMinor(minor) {
   return minor == null ? '-' : `NZ$${(minor / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
@@ -88,8 +92,8 @@ function CommentRow({ comment, legLabel, onTogglePublished, onSaveReply, onDelet
 
 function blankUpdate() {
   return {
-    id: null, title: '', body: '', dollars: '', currency: 'USD',
-    startedAt: null, arrivedAt: null, durationMinutes: null, countries: [],
+    id: null, title: '', body: '', dollars: '', currency: '',
+    startedAt: null, arrivedAt: null, durationMinutes: null, timesEdited: false, countries: [],
     city: '', country: '', lat: '', lng: '', geoStatus: '',
     bestMeal: '', bestMealNA: false, worstMeal: '', worstMealNA: false,
     photos: [], published: false,
@@ -106,7 +110,6 @@ export default function RodeoInput({ team, teamName, signOut }) {
   const [countryDraft, setCountryDraft] = useState('');
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
-  const [fxPreview, setFxPreview] = useState('');
   const [wpForm, setWpForm] = useState(null); // null = waypoint editor closed
   const [wpBusy, setWpBusy] = useState(false);
   const [wpStatus, setWpStatus] = useState('');
@@ -133,6 +136,28 @@ export default function RodeoInput({ team, teamName, signOut }) {
     setComments(C ?? []);
   }
   useEffect(() => { loadAll(); }, []);
+
+  // Rebuild the public snapshot straight after a change instead of waiting
+  // for the scheduled run (supabase/functions/rodeo-publish). Never blocks or
+  // undoes the save itself; resolves false if the refresh didn't happen.
+  async function publishSnapshot() {
+    const { error } = await rodeo.functions.invoke('rodeo-publish', { body: {} });
+    if (error) console.warn('[rodeo] Public snapshot refresh failed', error);
+    return !error;
+  }
+
+  // Both people in a pair share one login, often on two phones. Reload
+  // whenever HQ comes back to the foreground so a phone that's been sitting
+  // in a pocket sees the clock taps and edits made on the other one.
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') loadAll(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, []);
 
   const leg = useMemo(() => legs.find((l) => l.id === legId) ?? null, [legs, legId]);
   // For a race leg you write your own team's row; for a together leg, the shared row.
@@ -163,10 +188,13 @@ export default function RodeoInput({ team, teamName, signOut }) {
       title: existing.title ?? '',
       body: existing.body ?? '',
       dollars: existing.money_minor != null ? (existing.money_minor / 100).toString() : '',
-      currency: existing.currency ?? 'USD',
+      // Rows created by "Start the clock" pick up the column default (USD)
+      // before any spend is logged - don't let that pass for a real choice.
+      currency: existing.money_minor != null ? (existing.currency ?? '') : '',
       startedAt: existing.started_at ?? null,
       arrivedAt: existing.arrived_at ?? null,
       durationMinutes: existing.duration_minutes ?? null,
+      timesEdited: false,
       countries: existing.countries ?? [],
       city: existing.place_city ?? '', country: existing.place_country ?? '',
       lat: existing.lat ?? '', lng: existing.lng ?? '',
@@ -177,6 +205,19 @@ export default function RodeoInput({ team, teamName, signOut }) {
       published: !!existing.published,
     });
   }, [leg, existing]);
+
+  // The clock is tapped straight into the database (possibly from the other
+  // phone), so keep the form's copy in step with every reload - unless times
+  // have been hand-edited here and not saved yet.
+  useEffect(() => {
+    if (!existing || existing.id !== form.id) return;
+    setForm((f) => (f.timesEdited ? f : {
+      ...f,
+      startedAt: existing.started_at ?? null,
+      arrivedAt: existing.arrived_at ?? null,
+      durationMinutes: existing.duration_minutes ?? null,
+    }));
+  }, [existing, form.id]);
 
   // Tick the running clock while a pair is on the road.
   const racing = !!form.startedAt && !form.arrivedAt;
@@ -204,9 +245,14 @@ export default function RodeoInput({ team, teamName, signOut }) {
       id = data?.id;
     }
     setBusy(false);
+    if (isDuplicate(error)) {
+      setStatus('This leg was already started on another phone - showing that clock now.');
+      await loadAll();
+      return;
+    }
     if (error) { setStatus(error.message); return; }
     prefilledFor.current = `${leg.id}:${id}`; // keep whatever's already typed
-    setForm((f) => ({ ...f, id, startedAt, arrivedAt: null, durationMinutes: null }));
+    setForm((f) => ({ ...f, id, startedAt, arrivedAt: null, durationMinutes: null, timesEdited: false }));
     setEditTimes(false);
     setStatus('Clock started. Go go go!');
     await loadAll();
@@ -221,9 +267,10 @@ export default function RodeoInput({ team, teamName, signOut }) {
       .update({ arrived_at: arrivedAt, duration_minutes: durationMinutes }).eq('id', form.id);
     setBusy(false);
     if (error) { setStatus(error.message); return; }
-    setForm((f) => ({ ...f, arrivedAt, durationMinutes }));
+    setForm((f) => ({ ...f, arrivedAt, durationMinutes, timesEdited: false }));
     setStatus(`Arrived in ${fmtMinutes(durationMinutes)}. Now log what you spent and the story.`);
     await loadAll();
+    publishSnapshot(); // may reveal both pairs' times on the public page
   }
 
   // Manual correction for a forgotten tap or a wrong time. Only changes the
@@ -238,7 +285,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
     if (arrivedAt && !startedAt) { setStatus('Set a start time too.'); return; }
     const durationMinutes = minutesBetween(startedAt, arrivedAt);
     if (durationMinutes != null && durationMinutes <= 0) { setStatus('Arrival has to be after the start.'); return; }
-    setForm((f) => ({ ...f, startedAt, arrivedAt, durationMinutes }));
+    setForm((f) => ({ ...f, startedAt, arrivedAt, durationMinutes, timesEdited: true }));
     setEditTimes(false);
     setStatus('Times changed. Save the leg to keep them.');
   }
@@ -256,28 +303,22 @@ export default function RodeoInput({ team, teamName, signOut }) {
       envelope_opened_at: new Date().toISOString(),
     }).select(LEG_SELECT).single();
     setBusy(false);
+    if (isDuplicate(error)) {
+      setStatus(`Someone else just opened leg ${nextNo}. It's in the list now - pick it there, or open the next one.`);
+      await loadAll();
+      return;
+    }
     if (error) { setStatus(error.message); return; }
     setNewLeg({ from_place: '', to_place: '', scope: 'race' });
     await loadAll();
+    publishSnapshot();
     setLegId(data.id);
     setStatus(`Leg ${data.leg_no} opened.`);
   }
 
-  // Live "≈ NZD $X" preview as the amount/currency are typed, debounced so we
-  // don't hit the FX API on every keystroke.
-  useEffect(() => {
-    if (form.dollars === '' || Number.isNaN(+form.dollars) || !form.currency) { setFxPreview(''); return; }
-    let cancelled = false;
-    const t = setTimeout(async () => {
-      try {
-        const rate = await nzdRate(form.currency);
-        if (!cancelled) {
-          setFxPreview(rate === 1 ? '' : (+form.dollars * rate).toLocaleString(undefined, { maximumFractionDigits: 2 }));
-        }
-      } catch { if (!cancelled) setFxPreview(''); }
-    }, 500);
-    return () => { cancelled = true; clearTimeout(t); };
-  }, [form.dollars, form.currency]);
+  // "≈ NZ$X" preview at the locked rate, as the amount/currency are entered.
+  const fxPreview = form.currency !== 'NZD' && toNzdMinor(form.dollars, form.currency);
+  const formCurrency = currencyInfo(form.currency);
 
   function addCountry() {
     const c = countryDraft.trim();
@@ -318,26 +359,22 @@ export default function RodeoInput({ team, teamName, signOut }) {
 
   async function save() {
     if (!leg) return;
-    setBusy(true); setStatus('Saving...');
-    const currency = (form.currency || 'USD').trim().toUpperCase();
-
-    let moneyNzdMinor = null, fxWarning = '';
-    if (form.dollars !== '') {
-      try { moneyNzdMinor = await toNzdMinor(form.dollars, currency); }
-      catch { fxWarning = ' (could not fetch an exchange rate, so this leg has no NZD figure yet)'; }
+    const moneyMinor = form.dollars === '' ? null : Math.round(parseFloat(form.dollars) * 100);
+    if (moneyMinor != null && !currencyInfo(form.currency)) {
+      setStatus('Pick the currency you paid in.');
+      return;
     }
+    const currency = moneyMinor == null ? null : currencyInfo(form.currency).code;
+    setBusy(true); setStatus('Saving...');
 
     const row = {
       leg_id: leg.id,
       team: targetTeam,
       title: form.title || null,
       body: form.body || null,
-      money_minor: form.dollars === '' ? null : Math.round(parseFloat(form.dollars) * 100),
+      money_minor: moneyMinor,
       currency,
-      money_nzd_minor: moneyNzdMinor,
-      started_at: form.startedAt,
-      arrived_at: form.arrivedAt,
-      duration_minutes: minutesBetween(form.startedAt, form.arrivedAt) ?? form.durationMinutes,
+      money_nzd_minor: toNzdMinor(form.dollars, currency),
       countries: form.countries,
       place_city: form.city.trim() || null,
       place_country: form.country.trim() || null,
@@ -349,24 +386,64 @@ export default function RodeoInput({ team, teamName, signOut }) {
       published: form.published,
       submitted_by: teamName,
     };
+    // Clock taps write straight to the database, so only send times when
+    // they were corrected by hand here - otherwise a stale form on one phone
+    // would blank the arrival the other phone just recorded.
+    if (form.timesEdited) {
+      row.started_at = form.startedAt;
+      row.arrived_at = form.arrivedAt;
+      row.duration_minutes = minutesBetween(form.startedAt, form.arrivedAt) ?? form.durationMinutes;
+    }
     let error;
     if (form.id) ({ error } = await rodeo.from('rodeo_updates').update(row).eq('id', form.id));
     else ({ error } = await rodeo.from('rodeo_updates').insert(row));
     setBusy(false);
+    if (isDuplicate(error)) {
+      // The other phone filed first. Keep what's typed here, but point the
+      // form at their row so the next save updates it instead of failing again.
+      let q = rodeo.from('rodeo_updates').select('id').eq('leg_id', leg.id);
+      q = targetTeam ? q.eq('team', targetTeam) : q.is('team', null);
+      const { data: dup } = await q.maybeSingle();
+      if (dup) {
+        prefilledFor.current = `${leg.id}:${dup.id}`;
+        setForm((f) => ({ ...f, id: dup.id }));
+      }
+      setStatus('This leg was already filed from another phone. Your version is still here: press Update to replace theirs, or reload the page to see theirs.');
+      await loadAll();
+      return;
+    }
     if (error) { setStatus(error.message); return; }
-    setStatus(`Saved. It goes live on the public page within about half an hour (if ticked ready).${fxWarning}`);
+    // Only files someone tapped Remove on - never inferred from a diff
+    // against the database, which a stale form on the other phone would get
+    // wrong (and delete the photos it just added).
+    removeRodeoPhotos(droppedPhotos(form.removed, form.photos));
+    setForm((f) => ({ ...f, timesEdited: false, removed: [] }));
+    setStatus('Saved. Updating the public page...');
     await loadAll();
+    const published = await publishSnapshot();
+    if (!published) setStatus("Saved, but the public page couldn't refresh just now. It catches up at the next scheduled publish.");
+    else if (!form.published) setStatus("Saved. Not ticked ready, so it isn't on the public page yet.");
+    else setStatus('Saved and live on the public page.');
   }
 
   async function deleteUpdate() {
     if (!form.id) return;
     if (!window.confirm('Delete this entire leg summary, including any waypoints under it? This cannot be undone.')) return;
     setBusy(true); setStatus('Deleting...');
-    const { error } = await rodeo.from('rodeo_updates').delete().eq('id', form.id);
+    const photos = [
+      ...(existing?.id === form.id ? existing.photos ?? [] : []),
+      ...legWaypoints.flatMap((w) => w.photos ?? []),
+    ];
+    // .select() so a delete that RLS quietly filters out comes back as zero
+    // rows instead of a false "Deleted."
+    const { data, error } = await rodeo.from('rodeo_updates').delete().eq('id', form.id).select('id');
     setBusy(false);
     if (error) { setStatus(error.message); return; }
-    setStatus('Deleted. The public page catches up within about half an hour.');
+    if (!data?.length) { setStatus("Couldn't delete this update. Has section 13 of rodeo_schema.sql been run?"); return; }
+    removeRodeoPhotos(photos);
+    setStatus('Deleted.');
     await loadAll();
+    publishSnapshot();
   }
 
   // ---- waypoints: any number of extra story/photo dots under one summary ----
@@ -437,18 +514,23 @@ export default function RodeoInput({ team, teamName, signOut }) {
     else ({ error } = await rodeo.from('rodeo_waypoints').insert(row));
     setWpBusy(false);
     if (error) { setWpStatus(error.message); return; }
+    removeRodeoPhotos(droppedPhotos(wpForm.removed, wpForm.photos));
     setWpStatus('Saved.');
     setWpForm(null);
     await loadAll();
+    publishSnapshot();
   }
 
   async function deleteWaypoint(id) {
     if (!window.confirm('Delete this waypoint? This cannot be undone.')) return;
     setWpBusy(true);
+    const photos = waypoints.find((w) => w.id === id)?.photos ?? [];
     const { error } = await rodeo.from('rodeo_waypoints').delete().eq('id', id);
     setWpBusy(false);
     if (error) { setWpStatus(error.message); return; }
+    removeRodeoPhotos(photos);
     await loadAll();
+    publishSnapshot();
   }
 
   const legLabel = (l) =>
@@ -596,16 +678,30 @@ export default function RodeoInput({ team, teamName, signOut }) {
             <div className="rodeo-grid2">
               <div>
                 <label>Money spent (whole pair)</label>
-                <div className="rodeo-inline">
-                  <input type="number" step="0.01" value={form.dollars}
-                    onChange={(e) => setForm({ ...form, dollars: e.target.value })} placeholder="0.00" />
-                  <input className="rodeo-cur" value={form.currency}
-                    onChange={(e) => setForm({ ...form, currency: e.target.value })} placeholder="USD" />
-                </div>
-                {fxPreview && <p className="rodeo-fx-preview">≈ NZD ${fxPreview}</p>}
-                <p className="rodeo-fx-preview">Total for both of you. Never shown publicly - the site only says which pair spent more per person.</p>
+                <input type="number" inputMode="decimal" step="0.01" value={form.dollars}
+                  onChange={(e) => setForm({ ...form, dollars: e.target.value })}
+                  placeholder={formCurrency ? `0.00 ${formCurrency.code}` : '0.00'} />
               </div>
             </div>
+            <label>Paid in</label>
+            <div className="rodeo-country-pick">
+              {[...CURRENCIES, ...(form.currency && !formCurrency ? [{ code: form.currency, symbol: '', name: 'No locked rate' }] : [])].map((c) => {
+                const on = form.currency === c.code;
+                return (
+                  <button key={c.code} type="button" className={`rodeo-country${on ? ' on' : ''}`} aria-pressed={on}
+                    title={c.name} onClick={() => setForm((f) => ({ ...f, currency: on ? '' : c.code }))}>
+                    {on ? '✓ ' : ''}{c.symbol ? `${c.symbol} ` : ''}{c.code}
+                  </button>
+                );
+              })}
+            </div>
+            {formCurrency && formCurrency.code !== 'NZD' && (
+              <p className="rodeo-fx-preview">
+                {fxPreview ? `≈ NZ$${(fxPreview / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })} · ` : ''}
+                1 {formCurrency.code} = NZ${nzdRate(formCurrency.code).toLocaleString(undefined, { maximumSignificantDigits: 3 })}, rate locked {RATES_LOCKED_ON}
+              </p>
+            )}
+            <p className="rodeo-fx-preview">Total for both of you. Never shown publicly - the site only says which pair spent more per person.</p>
 
             <label>Countries crossed this leg</label>
             <div className="rodeo-country-pick">
@@ -671,14 +767,16 @@ export default function RodeoInput({ team, teamName, signOut }) {
             </div>
 
             <label>Photos</label>
-            <input type="file" accept="image/*" capture="environment" multiple onChange={onPhotos} />
+            <input type="file" accept="image/*" multiple onChange={onPhotos} />
             <div className="rodeo-photos">
               {form.photos.map((p, i) => (
                 <div key={i} className="rodeo-photo">
                   <img src={p.url} alt="" />
                   <AutoTextarea placeholder="caption" value={p.caption}
                     onChange={(e) => setForm((f) => { const ph = [...f.photos]; ph[i] = { ...ph[i], caption: e.target.value }; return { ...f, photos: ph }; })} />
-                  <button type="button" onClick={() => setForm((f) => ({ ...f, photos: f.photos.filter((_, j) => j !== i) }))}>Remove</button>
+                  <button type="button" onClick={() => setForm((f) => ({
+                    ...f, photos: f.photos.filter((_, j) => j !== i), removed: [...(f.removed ?? []), f.photos[i]],
+                  }))}>Remove</button>
                 </div>
               ))}
             </div>
@@ -750,14 +848,16 @@ export default function RodeoInput({ team, teamName, signOut }) {
               {wpForm.geoStatus && <p className="rodeo-fx-preview">{wpForm.geoStatus}</p>}
 
               <label>Photos</label>
-              <input type="file" accept="image/*" capture="environment" multiple onChange={onWaypointPhotos} />
+              <input type="file" accept="image/*" multiple onChange={onWaypointPhotos} />
               <div className="rodeo-photos">
                 {wpForm.photos.map((p, i) => (
                   <div key={i} className="rodeo-photo">
                     <img src={p.url} alt="" />
                     <AutoTextarea placeholder="caption" value={p.caption}
                       onChange={(e) => setWpForm((f) => { const ph = [...f.photos]; ph[i] = { ...ph[i], caption: e.target.value }; return { ...f, photos: ph }; })} />
-                    <button type="button" onClick={() => setWpForm((f) => ({ ...f, photos: f.photos.filter((_, j) => j !== i) }))}>Remove</button>
+                    <button type="button" onClick={() => setWpForm((f) => ({
+                      ...f, photos: f.photos.filter((_, j) => j !== i), removed: [...(f.removed ?? []), f.photos[i]],
+                    }))}>Remove</button>
                   </div>
                 ))}
               </div>

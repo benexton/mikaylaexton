@@ -1,30 +1,41 @@
-// Live currency conversion to NZD so every leg's spend is comparable for
-// scoring, regardless of what currency it was actually paid in.
-// Uses open.er-api.com: free, no key, broad currency coverage (incl. MAD/TRY
-// etc, unlike ECB-only sources).
-const RATE_TTL_MS = 60 * 60 * 1000; // rates don't move fast enough to refetch every keystroke
-const cache = new Map(); // currency code -> { rate, at }
+// Spend is converted to NZD so every leg is comparable for scoring, whatever
+// currency it was paid in. Rates are LOCKED (open.er-api.com, as published
+// 6 Oct 2026) rather than fetched live, so a leg's NZD figure never depends on
+// which day it was filed or re-saved, and filing works with no signal.
+// perNzd = units of that currency per NZ$1.
+export const RATES_LOCKED_ON = '6 Oct 2026';
 
-export async function nzdRate(currency) {
-  const code = (currency || '').trim().toUpperCase();
-  if (!code) return null;
-  if (code === 'NZD') return 1;
-  const hit = cache.get(code);
-  if (hit && Date.now() - hit.at < RATE_TTL_MS) return hit.rate;
+export const CURRENCIES = [
+  { code: 'EUR', symbol: '€',   name: 'Euro (Spain, France, Italy, Austria, Slovenia, Croatia, Greece, Bulgaria, Montenegro, Kosovo...)', perNzd: 0.499138 },
+  { code: 'MAD', symbol: 'DH',  name: 'Moroccan dirham',         perNzd: 5.582423 },
+  { code: 'GBP', symbol: '£',   name: 'Pound (GBP / Gibraltar)', perNzd: 0.423418 },
+  { code: 'BAM', symbol: 'KM',  name: 'Bosnian convertible mark', perNzd: 0.976207 },
+  { code: 'RSD', symbol: 'din', name: 'Serbian dinar',           perNzd: 58.609153 },
+  { code: 'HUF', symbol: 'Ft',  name: 'Hungarian forint',        perNzd: 183.483271 },
+  { code: 'RON', symbol: 'lei', name: 'Romanian leu',            perNzd: 2.664326 },
+  { code: 'ALL', symbol: 'L',   name: 'Albanian lek',            perNzd: 45.898567 },
+  { code: 'MKD', symbol: 'den', name: 'Macedonian denar',        perNzd: 30.385799 },
+  { code: 'TRY', symbol: '₺',   name: 'Turkish lira',            perNzd: 27.504545 },
+  { code: 'USD', symbol: 'US$', name: 'US dollar',               perNzd: 0.559798 },
+  { code: 'NZD', symbol: 'NZ$', name: 'NZ dollar',               perNzd: 1 },
+];
 
-  const res = await fetch(`https://open.er-api.com/v6/latest/${code}`);
-  if (!res.ok) throw new Error(`Exchange rate lookup failed (${res.status})`);
-  const json = await res.json();
-  const rate = json?.rates?.NZD;
-  if (typeof rate !== 'number') throw new Error(`No NZD rate found for ${code}`);
-  cache.set(code, { rate, at: Date.now() });
-  return rate;
+const BY_CODE = new Map(CURRENCIES.map((c) => [c.code, c]));
+
+export function currencyInfo(code) {
+  return BY_CODE.get((code || '').trim().toUpperCase()) ?? null;
+}
+
+// NZ$ per one unit of `code`, or null if it isn't one of ours.
+export function nzdRate(code) {
+  const c = currencyInfo(code);
+  return c ? 1 / c.perNzd : null;
 }
 
 // amountMajor is a plain decimal (e.g. "45.00"), not minor units.
-export async function toNzdMinor(amountMajor, currency) {
+export function toNzdMinor(amountMajor, code) {
   if (amountMajor === '' || amountMajor == null || Number.isNaN(+amountMajor)) return null;
-  const rate = await nzdRate(currency);
-  if (rate == null) return null;
-  return Math.round(+amountMajor * rate * 100);
+  const c = currencyInfo(code);
+  if (!c) return null;
+  return Math.round((+amountMajor / c.perNzd) * 100);
 }

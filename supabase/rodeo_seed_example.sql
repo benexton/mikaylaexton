@@ -11,9 +11,9 @@
 -- Photos here are placeholder images (picsum.photos) purely so the gallery
 -- has something to scroll through - swap in real uploaded URLs later.
 --
--- Run this in the Supabase SQL editor for the RODEO project, then trigger the
--- "Publish Rodeo snapshot" GitHub Action (or run scripts/export_rodeo.py) to
--- regenerate the public JSON the site reads.
+-- Run this in the Supabase SQL editor for the RODEO project, then save
+-- anything in HQ (or wait for the 3-hourly scheduled publish) to regenerate
+-- the public JSON the site reads.
 --
 -- Safe to re-run: it deletes any existing rows for these six leg numbers first.
 -- =============================================================================

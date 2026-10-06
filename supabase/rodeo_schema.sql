@@ -304,3 +304,49 @@ $$;
 
 revoke all on function public.rodeo_figures() from public, anon;
 grant execute on function public.rodeo_figures() to authenticated;
+
+-- 13. Deleting an update -----------------------------------------------------
+-- HQ's "Delete this update" had no policy to act under, so RLS quietly
+-- deleted nothing. Same own-team-or-collective rule as editing. Waypoints
+-- under it go too (on delete cascade).
+drop policy if exists "rodeo updates delete" on public.rodeo_updates;
+create policy "rodeo updates delete" on public.rodeo_updates
+  for delete to authenticated
+  using (team is null or team::text = public.rodeo_current_team());
+
+-- 14. Deleting photos --------------------------------------------------------
+-- Lets HQ remove a photo's file when it's taken off an update or waypoint, or
+-- the update/waypoint is deleted. The public/ folder (the published snapshot,
+-- written by the publisher with the service role) is off limits.
+drop policy if exists "rodeo media delete" on storage.objects;
+create policy "rodeo media delete" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'rodeo-media' and name not like 'public/%');
+
+-- 15. Scheduled publish -------------------------------------------------------
+-- HQ republishes the public snapshot straight after every change (the
+-- rodeo-publish edge function). This is the safety net: every 3 hours the
+-- database calls the same function itself. The project URL and the shared
+-- secret live in Vault, NOT in this file - create them once, separately:
+--   select vault.create_secret('https://<ref>.supabase.co', 'rodeo_project_url');
+--   select vault.create_secret('<long random string>', 'rodeo_publish_secret');
+-- and give the function the same secret as RODEO_PUBLISH_SECRET. Until both
+-- exist the job just fails quietly (see cron.job_run_details).
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+select cron.schedule(
+  'rodeo-publish',          -- re-running replaces the job of this name
+  '0 */3 * * *',
+  $job$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'rodeo_project_url')
+           || '/functions/v1/rodeo-publish',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-publish-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'rodeo_publish_secret')
+    ),
+    body := '{}'::jsonb
+  );
+  $job$
+);

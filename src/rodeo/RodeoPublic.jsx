@@ -79,7 +79,7 @@ function spendLine(summary) {
   return `${TEAMS[summary.more].name} spent NZ$${amt.toLocaleString()} more per person on this leg`;
 }
 
-// Mirrors TIME_POINTS / MONEY_POINTS in scripts/export_rodeo.py.
+// Mirrors TIME_POINTS / MONEY_POINTS in supabase/functions/rodeo-publish.
 const TIME_PTS = 2;
 const MONEY_PTS = 1;
 
@@ -94,9 +94,12 @@ function ScoreChips({ leg, team, u, listCountries = false }) {
   const scored = u.new_countries ?? u.countries ?? [];
   const countryPts = scored.length;
   const countryList = (u.countries ?? []).map((c) => (scored.includes(c) ? c : `${c} (again)`)).join(', ');
-  if (!time && !nCountries && won.money !== team) return null;
+  if (!time && !u.time_sealed && !nCountries && won.money !== team) return null;
   return (
     <div className="rodeo-score-chips">
+      {!time && u.time_sealed && (
+        <span className="rodeo-score-chip" title="Leg times are revealed once both pairs have arrived">⏱ sealed</span>
+      )}
       {time && (
         <span className={`rodeo-score-chip${won.time === team ? ' win' : ''}`}
           title={won.time === team ? 'Fastest pair this leg' : undefined}>
@@ -278,7 +281,7 @@ export default function RodeoPublic() {
     fetch(RODEO_SNAPSHOT_URL)
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
       .then(setData)
-      .catch(() => setErr('The snapshot has not been published yet. Run the "Publish Rodeo snapshot" Action.'));
+      .catch(() => setErr('Nothing has been published yet - check back soon.'));
   }, []);
 
   // Flatten a leg update into its orderable dots: waypoints (as dropped)
@@ -549,8 +552,7 @@ function PhotoCarousel({ photos }) {
 
 // Public comments on a leg, Turnstile-verified and moderated (see
 // supabase/functions/rodeo-comment). Reads live from Supabase (not the static
-// snapshot) so a new comment or reply shows up without waiting on the next
-// "Publish Rodeo snapshot" run.
+// snapshot) so approving a comment or reply needs no republish.
 function Comments({ legId }) {
   const [comments, setComments] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -572,13 +574,26 @@ function Comments({ legId }) {
     return () => { cancelled = true; };
   }, [legId]);
 
+  // The Turnstile script loads async, so it may not be there yet if a leg is
+  // opened straight after the page loads - wait for it (up to ~15s).
   useEffect(() => {
-    if (!RODEO_TURNSTILE_SITE_KEY || !widgetRef.current || !window.turnstile) return;
-    widgetId.current = window.turnstile.render(widgetRef.current, {
-      sitekey: RODEO_TURNSTILE_SITE_KEY,
-      callback: (t) => setToken(t),
-    });
-    return () => { if (widgetId.current != null) window.turnstile?.remove(widgetId.current); };
+    if (!RODEO_TURNSTILE_SITE_KEY) return;
+    let tries = 0;
+    const tryRender = () => {
+      if (!widgetRef.current || !window.turnstile) return false;
+      widgetId.current = window.turnstile.render(widgetRef.current, {
+        sitekey: RODEO_TURNSTILE_SITE_KEY,
+        callback: (t) => setToken(t),
+      });
+      return true;
+    };
+    const timer = tryRender() ? null : setInterval(() => {
+      if (tryRender() || ++tries > 60) clearInterval(timer);
+    }, 250);
+    return () => {
+      if (timer) clearInterval(timer);
+      if (widgetId.current != null) window.turnstile?.remove(widgetId.current);
+    };
   }, []);
 
   async function submit(e) {
