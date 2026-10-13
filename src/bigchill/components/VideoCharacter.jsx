@@ -15,7 +15,7 @@ import { clipUrl } from '../lib/bigchillSupabase.js';
 // timeout is harmless to keep as a backstop.
 const FADE_MS = 1000;
 
-export default function VideoCharacter({ clip, name, role, onDone, autoPlay = false, overlay }) {
+export default function VideoCharacter({ clip, name, onDone, autoPlay = false, overlay }) {
   const [mode, setMode] = useState(autoPlay ? 'playing' : 'idle');
   const [paused, setPaused] = useState(false);
   // Drives the video's opacity - false at the start of every 'playing' run

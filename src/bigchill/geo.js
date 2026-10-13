@@ -17,13 +17,10 @@ export function haversineMeters(a, b) {
 // "I am here" override alongside this - see docs/04-build-spec.md.
 export function useLiveLocation() {
   const [position, setPosition] = useState(null);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(() => ('geolocation' in navigator ? null : 'unsupported'));
 
   useEffect(() => {
-    if (!('geolocation' in navigator)) {
-      setError('unsupported');
-      return;
-    }
+    if (!('geolocation' in navigator)) return;
     const watchId = navigator.geolocation.watchPosition(
       (pos) => setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => setError(err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable'),
