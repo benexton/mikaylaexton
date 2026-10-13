@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -171,6 +171,33 @@ function curved(points, teamKey) {
     }
   }
   return out;
+}
+
+// OpenFreeMap vector basemap (no key) with every label forced to the English
+// name, falling back to the Latin transliteration and then the local name.
+const ENGLISH_NAME = ['coalesce', ['get', 'name_en'], ['get', 'name:latin'], ['get', 'name']];
+function EnglishBasemap() {
+  const map = useMap();
+  useEffect(() => {
+    let layer;
+    let cancelled = false;
+    (async () => {
+      const [{ default: L }, style] = await Promise.all([
+        import('leaflet'),
+        fetch('https://tiles.openfreemap.org/styles/liberty').then((r) => r.json()),
+        import('@maplibre/maplibre-gl-leaflet'),
+      ]);
+      if (cancelled) return;
+      for (const l of style.layers) {
+        const tf = l.layout?.['text-field'];
+        if (Array.isArray(tf) && JSON.stringify(tf).includes('name')) l.layout['text-field'] = ENGLISH_NAME;
+      }
+      layer = L.maplibreGL({ style, attribution: '&copy; OpenStreetMap contributors &copy; OpenFreeMap' });
+      layer.addTo(map);
+    })().catch(() => {});
+    return () => { cancelled = true; if (layer) map.removeLayer(layer); };
+  }, [map]);
+  return null;
 }
 
 function FitBounds({ points }) {
@@ -421,9 +448,7 @@ export default function RodeoPublic() {
       {view === 'map' && (
         <div className="rodeo-map">
           <MapContainer center={[37, 10]} zoom={4} scrollWheelZoom style={{ flex: '1 1 auto', minHeight: 0, width: '100%' }}>
-            <TileLayer attribution='&copy; OpenStreetMap contributors &copy; CARTO'
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-              subdomains="abcd" maxZoom={19} />
+            <EnglishBasemap />
             <FitBounds points={allPoints} />
             {['ben', 'miki'].map((tk) => (
               <Polyline key={tk} positions={curved(teamPaths[tk].map((p) => p.pt), tk)}
