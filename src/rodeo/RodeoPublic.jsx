@@ -421,8 +421,9 @@ export default function RodeoPublic() {
       {view === 'map' && (
         <div className="rodeo-map">
           <MapContainer center={[37, 10]} zoom={4} scrollWheelZoom style={{ flex: '1 1 auto', minHeight: 0, width: '100%' }}>
-            <TileLayer attribution='&copy; OpenStreetMap contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <TileLayer attribution='&copy; OpenStreetMap contributors &copy; CARTO'
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              subdomains="abcd" maxZoom={19} />
             <FitBounds points={allPoints} />
             {['ben', 'miki'].map((tk) => (
               <Polyline key={tk} positions={curved(teamPaths[tk].map((p) => p.pt), tk)}
