@@ -122,6 +122,26 @@ export function droppedPhotos(before, after) {
   return (before ?? []).filter((p) => !keep.has(p.url));
 }
 
+// Waypoints read oldest first, like the route on the map. Ones saved before
+// waypoints had dates carry none; they predate every dated one and keep the
+// order they came in (Array.sort is stable).
+export function sortWaypoints(list) {
+  const t = (w) => (w.arrived_at ? new Date(w.arrived_at).getTime() : -Infinity);
+  return [...(list ?? [])].sort((a, b) => {
+    const ta = t(a), tb = t(b);
+    return ta === tb ? 0 : ta < tb ? -1 : 1;
+  });
+}
+
+export function fmtWaypointDate(iso) {
+  return iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '';
+}
+
+const NEW_WITHIN_MS = 48 * 60 * 60 * 1000;
+export function isNewWaypoint(iso) {
+  return !!iso && Date.now() - new Date(iso).getTime() < NEW_WITHIN_MS;
+}
+
 // Public snapshot URL (written by the rodeo-publish edge function).
 export const RODEO_SNAPSHOT_URL =
   `${url ?? ''}/storage/v1/object/public/rodeo-media/public/the-rodeo-public.json`;

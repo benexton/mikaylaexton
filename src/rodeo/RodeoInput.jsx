@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { rodeo, uploadRodeoPhoto, removeRodeoPhotos, droppedPhotos, TEAMS } from './rodeoSupabase.js';
+import { rodeo, uploadRodeoPhoto, removeRodeoPhotos, droppedPhotos, sortWaypoints, fmtWaypointDate, TEAMS } from './rodeoSupabase.js';
 import { CURRENCIES, RATES_LOCKED_ON, currencyInfo, nzdRate, toNzdMinor } from './currency.js';
 import { geocodePlace } from './geocode.js';
 
@@ -448,14 +448,14 @@ export default function RodeoInput({ team, teamName, signOut }) {
 
   // ---- waypoints: any number of extra story/photo dots under one summary ----
   const legWaypoints = useMemo(
-    () => (form.id ? waypoints.filter((w) => w.update_id === form.id) : []),
+    () => (form.id ? sortWaypoints(waypoints.filter((w) => w.update_id === form.id)) : []),
     [waypoints, form.id]
   );
 
   useEffect(() => { setWpForm(null); setWpStatus(''); }, [legId]);
 
   function blankWaypoint() {
-    return { id: null, title: '', body: '', city: '', country: '', lat: '', lng: '', geoStatus: '', arrivedAt: '', photos: [] };
+    return { id: null, title: '', body: '', city: '', country: '', lat: '', lng: '', geoStatus: '', arrivedAt: toLocalInput(new Date().toISOString()), photos: [] };
   }
   function editWaypoint(w) {
     setWpForm({
@@ -817,6 +817,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
                     {(w.place_city || w.place_country) && (
                       <span className="rodeo-muted"> - {[w.place_city, w.place_country].filter(Boolean).join(', ')}</span>
                     )}
+                    {w.arrived_at && <span className="rodeo-muted"> · {fmtWaypointDate(w.arrived_at)}</span>}
                   </div>
                   <button type="button" className="rodeo-btn ghost small" onClick={() => editWaypoint(w)}>Edit</button>
                   <button type="button" className="rodeo-btn ghost small rodeo-danger" onClick={() => deleteWaypoint(w.id)}>Delete</button>
@@ -846,6 +847,10 @@ export default function RodeoInput({ team, teamName, signOut }) {
                   onBlur={locateWaypoint} />
               </div>
               {wpForm.geoStatus && <p className="rodeo-fx-preview">{wpForm.geoStatus}</p>}
+
+              <label>When</label>
+              <input type="datetime-local" value={wpForm.arrivedAt}
+                onChange={(e) => setWpForm({ ...wpForm, arrivedAt: e.target.value })} />
 
               <label>Photos</label>
               <input type="file" accept="image/*" multiple onChange={onWaypointPhotos} />

@@ -3,7 +3,7 @@ import { MapContainer, Polyline, CircleMarker, Tooltip, useMap } from 'react-lea
 import 'leaflet/dist/leaflet.css';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { rodeo, RODEO_SNAPSHOT_URL, RODEO_COMMENT_FN_URL, RODEO_TURNSTILE_SITE_KEY, RODEO_ANON_KEY, TEAMS, COLLECTIVE_COLOR } from './rodeoSupabase.js';
+import { rodeo, RODEO_SNAPSHOT_URL, RODEO_COMMENT_FN_URL, RODEO_TURNSTILE_SITE_KEY, RODEO_ANON_KEY, TEAMS, COLLECTIVE_COLOR, sortWaypoints, fmtWaypointDate, isNewWaypoint } from './rodeoSupabase.js';
 
 const INTRO = [
   {
@@ -311,10 +311,10 @@ export default function RodeoPublic() {
       .catch(() => setErr('Nothing has been published yet - check back soon.'));
   }, []);
 
-  // Flatten a leg update into its orderable dots: waypoints (as dropped)
+  // Flatten a leg update into its orderable dots: waypoints (oldest first)
   // first, the leg summary itself last (it's written once, at the end).
   function updatePoints(u) {
-    const pts = (u.waypoints || [])
+    const pts = sortWaypoints(u.waypoints)
       .filter((w) => w.lat != null && w.lng != null)
       .map((w) => ({ ...w, isWaypoint: true }));
     if (u.lat != null && u.lng != null) pts.push({ ...u, isWaypoint: false });
@@ -706,11 +706,13 @@ function LegDetail({ leg, onClose }) {
                   <PhotoCarousel photos={u.photos} />
                   {u.waypoints?.length > 0 && (
                     <div className="rodeo-waypoints-stack">
-                      {u.waypoints.map((w, wi) => (
+                      {sortWaypoints(u.waypoints).map((w, wi) => (
                         <div key={wi} className="rodeo-waypoint-card">
-                          {w.title && <h4>{w.title}</h4>}
-                          {(w.place_city || w.place_country) && (
-                            <p className="rodeo-waypoint-place">{[w.place_city, w.place_country].filter(Boolean).join(', ')}</p>
+                          {w.title && <h4>{w.title}{isNewWaypoint(w.arrived_at) && <span className="rodeo-new-badge">New</span>}</h4>}
+                          {(w.place_city || w.place_country || w.arrived_at) && (
+                            <p className="rodeo-waypoint-place">
+                              {[[w.place_city, w.place_country].filter(Boolean).join(', '), fmtWaypointDate(w.arrived_at)].filter(Boolean).join(' · ')}
+                            </p>
                           )}
                           {w.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(w.body)} />}
                           <PhotoCarousel photos={w.photos} />
