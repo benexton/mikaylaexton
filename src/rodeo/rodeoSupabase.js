@@ -44,10 +44,17 @@ export function teamOf(session) {
 // Phone photos come off the camera at 3-8 MB, which is slow to upload on
 // roaming data and slow to view. Re-encode anything big to a JPEG no larger
 // than MAX_EDGE px on its long side. Re-encoding also drops EXIF, so the
-// camera's GPS tag doesn't ship with every photo.
-const MAX_EDGE = 1600;
+// camera's GPS tag doesn't ship with every photo. WebP where the browser can
+// encode it (same settings as the Seismic Walk photos); JPEG otherwise, since
+// Safari's canvas silently hands back a PNG for 'image/webp'.
+const MAX_EDGE = 1400;
+const WEBP_QUALITY = 0.78;
 const JPEG_QUALITY = 0.82;
 const RESIZE_OVER_BYTES = 400 * 1024;
+
+function encode(canvas, type, quality) {
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+}
 
 async function shrinkPhoto(file) {
   // GIFs would lose their animation; anything the browser can't decode
@@ -71,10 +78,15 @@ async function shrinkPhoto(file) {
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close?.();
 
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY));
+  let blob = await encode(canvas, 'image/webp', WEBP_QUALITY);
+  let ext = 'webp';
+  if (blob?.type !== 'image/webp') {
+    blob = await encode(canvas, 'image/jpeg', JPEG_QUALITY);
+    ext = 'jpg';
+  }
   if (!blob || blob.size >= file.size) return file;
-  const name = file.name.replace(/\.[^.]*$/, '') + '.jpg';
-  return new File([blob], name, { type: 'image/jpeg' });
+  const name = file.name.replace(/\.[^.]*$/, '') + '.' + ext;
+  return new File([blob], name, { type: blob.type });
 }
 
 // Upload one photo to the rodeo bucket and return its public URL.
