@@ -153,8 +153,15 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-nopoints { display: block; margin-top: 8px; font-size: .82rem; color: var(--ink-soft); }
 
 /* single thumbnail, used on timeline/merge cards */
-.rodeo-thumb { position: relative; margin-top: 10px; display: inline-block; }
-.rodeo-thumb img { height: 120px; border-radius: 8px; display: block; }
+.rodeo-thumb { position: relative; margin-top: 10px; display: block; }
+.rodeo-thumb img { width: 100%; height: 190px; object-fit: cover; border-radius: 8px; display: block; }
+.rodeo-merge-card .rodeo-thumb img { height: 260px; }
+
+/* teaser + footer on a timeline tile */
+.rodeo-excerpt { font-size: .93rem; text-align: left; margin: 10px 0 0; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.rodeo-tile-more { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-top: 10px; font-size: .84rem; }
+.rodeo-tile-wp { font-weight: 600; color: var(--ink); }
+.rodeo-tile-cta { margin-left: auto; font-weight: 600; color: var(--terra); }
 .rodeo-thumb-count { position: absolute; right: 6px; bottom: 6px; background: rgba(20,34,64,.72); color: #fff; font-size: .74rem; font-weight: 600; padding: 1px 7px; border-radius: 20px; }
 
 /* map tooltip thumbnail */
@@ -220,7 +227,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-comment p { margin: 3px 0 0; }
 .rodeo-comment-reply { margin-top: 8px; padding: 8px 10px; background: var(--paper-2); border-left: 3px solid var(--sky); border-radius: 6px; font-size: .86rem; }
 .rodeo-comment-reply p { margin: 2px 0 0; }
-.rodeo-comment-form { display: flex; flex-direction: column; gap: 8px; max-width: 420px; }
+.rodeo-comment-form { display: flex; flex-direction: column; gap: 8px; }
 .rodeo-comment-form textarea { resize: vertical; }
 
 /* mobile */

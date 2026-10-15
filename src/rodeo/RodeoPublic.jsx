@@ -71,6 +71,38 @@ function legTime(u) {
 }
 function html(md) { return { __html: DOMPurify.sanitize(marked.parse(md || '')) }; }
 
+// Markdown flattened to plain text, for the short teaser on a timeline tile.
+// DOMParser builds an inert document, so nothing in it runs or loads.
+function plainText(md) {
+  const spaced = marked.parse(md || '').replace(/<\/(p|li|h[1-6]|blockquote)>|<br\s*\/?>/g, ' ');
+  return (new DOMParser().parseFromString(spaced, 'text/html').body.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+// Teaser on a timeline tile: the opening lines only, so the full story (and
+// any waypoints) is a reason to open the leg.
+function TileTeaser({ md }) {
+  const text = plainText(md);
+  return text ? <p className="rodeo-excerpt">{text}</p> : null;
+}
+
+// Footer on a timeline tile: flags extra waypoints to read and invites a tap.
+function TileMore({ u }) {
+  const n = u?.waypoints?.length ?? 0;
+  if (!n && !u?.body) return null;
+  const fresh = (u.waypoints ?? []).some((w) => isNewWaypoint(w.arrived_at));
+  return (
+    <div className="rodeo-tile-more">
+      {n > 0 && (
+        <span className="rodeo-tile-wp">
+          📍 {n} more {n === 1 ? 'update' : 'updates'}
+          {fresh && <span className="rodeo-new-badge">New</span>}
+        </span>
+      )}
+      <span className="rodeo-tile-cta">Read more →</span>
+    </div>
+  );
+}
+
 // Raw spend never reaches the snapshot - only this per-leg comparison does.
 function spendLine(summary) {
   if (!summary) return null;
@@ -474,7 +506,6 @@ export default function RodeoPublic() {
                   <div className="rodeo-merge-card" onClick={() => setOpenLeg(li)}>
                     <span className="rodeo-leg-tag">Leg {leg.leg_no} · together</span>
                     <h3>{leg.to_place}{u?.title ? `: ${u.title}` : ''}</h3>
-                    {u?.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(u.body)} />}
                     {(u?.best_meal || u?.worst_meal) && (
                       <div className="rodeo-stats">
                         {u.best_meal && <span>🍽️ Best: {u.best_meal}</span>}
@@ -482,6 +513,8 @@ export default function RodeoPublic() {
                       </div>
                     )}
                     <PhotoThumb photos={u?.photos} />
+                    <TileTeaser md={u?.body} />
+                    <TileMore u={u} />
                     <span className="rodeo-nopoints">reunion leg · no points</span>
                   </div>
                 </div>
@@ -509,8 +542,9 @@ export default function RodeoPublic() {
                               {u.worst_meal && <span>🤢 Worst: {u.worst_meal}</span>}
                             </div>
                           )}
-                          {u.body && <div className="rodeo-body" dangerouslySetInnerHTML={html(u.body)} />}
                           <PhotoThumb photos={u.photos} />
+                          <TileTeaser md={u.body} />
+                          <TileMore u={u} />
                         </>
                       )}
                     </div>
@@ -607,8 +641,13 @@ function Comments({ legId }) {
     let tries = 0;
     const tryRender = () => {
       if (!widgetRef.current || !window.turnstile) return false;
+      // Even 'flexible' won't go under 300px, which overflows a phone's
+      // narrow comment form; shrink the whole widget to fit instead.
+      const room = widgetRef.current.clientWidth;
+      if (room && room < 300) widgetRef.current.style.zoom = String(room / 300);
       widgetId.current = window.turnstile.render(widgetRef.current, {
         sitekey: RODEO_TURNSTILE_SITE_KEY,
+        size: 'flexible', // fills the form's width instead of a fixed 300px
         callback: (t) => setToken(t),
       });
       return true;
