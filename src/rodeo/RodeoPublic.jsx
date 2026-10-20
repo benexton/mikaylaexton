@@ -344,6 +344,7 @@ export default function RodeoPublic() {
   const [err, setErr] = useState('');
   const [step, setStep] = useState(0);
   const [intro, setIntro] = useState(true);
+  const [bannerOpen, setBannerOpen] = useState(true);
   const [view, setView] = useState('map');
   const [openLeg, setOpenLeg] = useState(null);
   const isMobile = useIsMobile();
@@ -459,6 +460,10 @@ export default function RodeoPublic() {
   if (err) return <div className="rodeo-public map-view"><div className="rodeo-empty"><p>{err}</p></div></div>;
   if (!data) return <div className="rodeo-public map-view"><div className="rodeo-loading">Loading the Rodeo...</div></div>;
 
+  // Leg 0 holds the pre-trip updates; the first real envelope is Leg 1, and
+  // opening it (in HQ) republishes the snapshot, which retires the banner.
+  const preTrip = !data.legs.some((l) => l.leg_no > 0);
+
   const leader = data.scoreboard.ben === data.scoreboard.miki ? null
     : (data.scoreboard.ben > data.scoreboard.miki ? 'ben' : 'miki');
 
@@ -508,6 +513,18 @@ export default function RodeoPublic() {
 
       {view === 'map' && (
         <div className="rodeo-map">
+          {/* Space is held while the intro is up (just hidden), so the map
+              doesn't change size the moment the intro closes. */}
+          {bannerOpen && preTrip && (
+            <div className={`rodeo-trip-banner${intro ? ' waiting' : ''}`} role="status">
+              <p>
+                The trip commences on 23 October in Casablanca. In the meantime, check out the{' '}
+                <button type="button" className="rodeo-trip-link" onClick={() => setView('timeline')}>timeline view</button>
+                {' '}for some pre-trip updates.
+              </p>
+              <button type="button" className="rodeo-trip-x" onClick={() => setBannerOpen(false)} aria-label="Dismiss banner">×</button>
+            </div>
+          )}
           <MapContainer center={[37, 10]} zoom={4} scrollWheelZoom style={{ flex: '1 1 auto', minHeight: 0, width: '100%' }}>
             <EnglishBasemap />
             <FitBounds points={allPoints} />

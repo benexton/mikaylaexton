@@ -102,6 +102,14 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 /* map */
 .rodeo-map { max-width: 1100px; margin: 0 auto; padding: 0 12px; width: 100%; }
 .rodeo-map .leaflet-container { border-radius: 16px; box-shadow: var(--shadow); }
+/* pre-trip banner, across the top of the map */
+.rodeo-trip-banner { flex: 0 0 auto; display: flex; align-items: center; gap: 12px; margin: 0 0 10px; padding: 10px 14px; background: var(--ink); color: #fff; border-radius: 12px; box-shadow: var(--shadow); font-size: .92rem; line-height: 1.45; }
+.rodeo-trip-banner.waiting { visibility: hidden; }
+.rodeo-trip-banner p { margin: 0; flex: 1 1 auto; }
+.rodeo-trip-link { font: inherit; font-weight: 600; color: #ffe6c8; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.rodeo-trip-link:hover { color: #fff; }
+.rodeo-trip-x { flex: 0 0 auto; align-self: flex-start; background: none; border: 0; color: #fff; opacity: .7; font-size: 1.3rem; line-height: 1; padding: 0 2px; cursor: pointer; }
+.rodeo-trip-x:hover { opacity: 1; }
 .rodeo-map-note { text-align: center; color: var(--ink-soft); font-size: .86rem; margin: 10px; }
 
 /* map view: fit header + toggle + map into one screen, no page scroll.
