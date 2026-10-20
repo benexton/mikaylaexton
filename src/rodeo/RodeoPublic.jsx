@@ -50,6 +50,17 @@ const INTRO = [
   },
 ];
 
+// Remembers (per browser) that the intro has been dismissed, so returning
+// visitors land straight on the map. Storage can throw (private windows,
+// blocked site data), in which case the intro just shows every visit.
+const INTRO_SEEN_KEY = 'rodeo-intro-seen';
+function introSeen() {
+  try { return localStorage.getItem(INTRO_SEEN_KEY) === '1'; } catch { return false; }
+}
+function markIntroSeen() {
+  try { localStorage.setItem(INTRO_SEEN_KEY, '1'); } catch { /* storage unavailable */ }
+}
+
 // Mirrors rodeo.css's 760px mobile breakpoint, for the handful of things
 // (like which intro copy to show) that need to branch in JS, not just CSS.
 function useIsMobile() {
@@ -343,11 +354,16 @@ export default function RodeoPublic() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
   const [step, setStep] = useState(0);
-  const [intro, setIntro] = useState(true);
+  const [intro, setIntro] = useState(() => !introSeen());
   const [bannerOpen, setBannerOpen] = useState(true);
   const [view, setView] = useState('map');
   const [openLeg, setOpenLeg] = useState(null);
   const isMobile = useIsMobile();
+
+  function closeIntro() {
+    markIntroSeen();
+    setIntro(false);
+  }
 
   useEffect(() => {
     fetch(RODEO_SNAPSHOT_URL)
@@ -474,11 +490,11 @@ export default function RodeoPublic() {
           <div className={`rodeo-modal ${INTRO[step].hero ? 'hero' : ''}`}>
             {INTRO[step].hero && <img className="rodeo-modal-hero" src="/rodeo-hero.png" alt="Ben, Miki, John and Bruce in front of Istanbul and European landmarks" />}
             <div className="rodeo-modal-body">
-              <button className="rodeo-x" onClick={() => setIntro(false)} aria-label="Skip intro">×</button>
+              <button className="rodeo-x" onClick={closeIntro} aria-label="Skip intro">×</button>
               <span className="rodeo-kicker">The Rodeo: Bosphorus or Bust</span>
               <h2>{INTRO[step].title}</h2>
               <div className="rodeo-modal-copy">{(isMobile && INTRO[step].mobileBody) || INTRO[step].body}</div>
-              <button className="rodeo-btn big" onClick={() => (step < INTRO.length - 1 ? setStep(step + 1) : setIntro(false))}>
+              <button className="rodeo-btn big" onClick={() => (step < INTRO.length - 1 ? setStep(step + 1) : closeIntro())}>
                 {INTRO[step].button}
               </button>
               <div className="rodeo-dots">{INTRO.map((_, i) => <span key={i} className={i === step ? 'on' : ''} />)}</div>
