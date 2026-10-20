@@ -256,6 +256,7 @@ export default function RodeoInput({ team, teamName, signOut }) {
     setEditTimes(false);
     setStatus('Clock started. Go go go!');
     await loadAll();
+    publishSnapshot(); // puts the "on the road" badge on the public page
   }
 
   async function arriveClock() {

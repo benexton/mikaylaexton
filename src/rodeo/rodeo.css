@@ -217,6 +217,19 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-waypoints-stack { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 14px; }
 .rodeo-waypoint-card h4 { font-family: var(--sans); font-size: .95rem; margin: 0 0 2px; }
 .rodeo-waypoint-place { font-size: .8rem; color: var(--ink-soft); margin: 0 0 4px; }
+/* "On the road": a pair has started the clock and hasn't arrived yet */
+.rodeo-road-badge { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: #e6f4ec; color: #1f7a45; font-family: var(--sans); font-size: .65rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
+.rodeo-pending .rodeo-road-badge { margin-left: 0; margin-right: 4px; }
+.rodeo-road-badge i { width: 7px; height: 7px; border-radius: 50%; background: #2e9e5b; animation: rodeo-blink 1.6s ease-in-out infinite; }
+@keyframes rodeo-blink { 50% { opacity: .25; } }
+/* ring under a map dot (Leaflet path; stroke is animated, not transform, so it stays on its dot) */
+.rodeo-pulse { animation: rodeo-pulse 1.9s ease-out infinite; }
+@keyframes rodeo-pulse { from { stroke-opacity: .85; stroke-width: 2px; } to { stroke-opacity: 0; stroke-width: 10px; } }
+@media (prefers-reduced-motion: reduce) {
+  .rodeo-road-badge i { animation: none; }
+  .rodeo-pulse { animation: none; stroke-opacity: .5; stroke-width: 4px; }
+}
+
 .rodeo-new-badge { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; background: var(--terra); color: #fff; font-size: .65rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
 
 /* public comments, in the detail modal */

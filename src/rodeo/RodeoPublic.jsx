@@ -85,6 +85,11 @@ function TileTeaser({ md }) {
   return text ? <p className="rodeo-excerpt">{text}</p> : null;
 }
 
+// Shown while a pair has their clock running and hasn't arrived yet.
+function RoadBadge() {
+  return <span className="rodeo-road-badge"><i aria-hidden="true" />On the road</span>;
+}
+
 // Footer on a timeline tile: flags extra waypoints to read and invites a tap.
 function TileMore({ u }) {
   const n = u?.waypoints?.length ?? 0;
@@ -318,13 +323,20 @@ function Markers({ markers, onSelect }) {
 
   const placed = useMemo(() => declutter(map, zoom, markers), [map, zoom, markers]);
 
-  return placed.map((m) => (
+  // A pulsing ring sits under the dot of a pair that's on the road. It's laid
+  // out from the decluttered position, so it stays on its dot, and it's not
+  // interactive, so taps still reach the dot.
+  return placed.flatMap((m) => [
+    m.pulse && (
+      <CircleMarker key={`${m.key}-pulse`} center={m.pt} radius={m.radius + 5}
+        pathOptions={{ color: m.color, weight: 3, fill: false, interactive: false, className: 'rodeo-pulse' }} />
+    ),
     <CircleMarker key={m.key} center={m.pt} radius={m.radius}
       pathOptions={{ color: '#fff', weight: 2, fillColor: m.color, fillOpacity: 1 }}
       eventHandlers={{ click: () => onSelect(m.legIndex) }}>
       <Tooltip>{m.tooltip}</Tooltip>
-    </CircleMarker>
-  ));
+    </CircleMarker>,
+  ]);
 }
 
 export default function RodeoPublic() {
@@ -390,7 +402,22 @@ export default function RodeoPublic() {
 
   const markers = useMemo(() => {
     const out = [];
+    if (!data) return out;
+    // While a pair is on the road, ring their latest known position: their
+    // newest waypoint on the current leg, else where the previous leg left them.
+    // The leg's own summary pin doesn't count - that's the destination.
+    function lastSeenIndex(tk) {
+      const li = data.legs.reduce((acc, l, i) => (l.on_the_road?.[tk] ? i : acc), -1);
+      let idx = -1;
+      if (li >= 0) {
+        teamPaths[tk].forEach((p, i) => {
+          if (p.legIndex === li ? p.point.isWaypoint : p.legIndex < li) idx = i;
+        });
+      }
+      return idx;
+    }
     ['ben', 'miki'].forEach((tk) => {
+      const seenAt = lastSeenIndex(tk);
       teamPaths[tk].forEach((p, i) => {
         const place = [p.point.place_city, p.point.place_country].filter(Boolean).join(', ');
         const label = p.point.isWaypoint
@@ -398,11 +425,13 @@ export default function RodeoPublic() {
           : `${data.legs[p.legIndex].to_place}${p.point.title ? ` - ${p.point.title}` : ''}`;
         out.push({
           key: `${tk}-${i}`, pt: p.pt, radius: p.point.isWaypoint ? 5 : 7, color: TEAMS[tk].color, legIndex: p.legIndex,
+          pulse: i === seenAt,
           tooltip: (
             <>
               {p.point.photos?.[0] && <img className="rodeo-tooltip-thumb" src={p.point.photos[0].url} alt="" />}
               <b style={{ color: TEAMS[tk].color }}>{TEAMS[tk].name}</b><br />
               {label}
+              {i === seenAt && <><br /><em>Last seen here, on the road</em></>}
             </>
           ),
         });
@@ -525,13 +554,18 @@ export default function RodeoPublic() {
                 <span className="rodeo-leg-marker">Leg {leg.leg_no}</span>
                 {['ben', 'miki'].map((tk) => {
                   const u = leg.updates.find((x) => x.team === tk);
+                  const road = !!leg.on_the_road?.[tk];
                   return (
                     <div key={tk} className={`rodeo-card side-${TEAMS[tk].side}`}
                       style={{ borderColor: TEAMS[tk].color }} onClick={() => u && setOpenLeg(li)}>
-                      {!u ? <p className="rodeo-pending">{TEAMS[tk].name} has not filed yet.</p> : (
+                      {!u ? (
+                        <p className="rodeo-pending">
+                          {road ? <><RoadBadge /> {TEAMS[tk].name}: no story yet.</> : `${TEAMS[tk].name} has not filed yet.`}
+                        </p>
+                      ) : (
                         <>
                           <div className="rodeo-card-head">
-                            <span style={{ color: TEAMS[tk].color }}>{TEAMS[tk].name}</span>
+                            <span style={{ color: TEAMS[tk].color }}>{TEAMS[tk].name}{road && <RoadBadge />}</span>
                             <span className="rodeo-leg-pts">{leg.points?.[tk] ?? 0} pts</span>
                           </div>
                           {u.title && <h3>{u.title}</h3>}
@@ -733,7 +767,10 @@ function LegDetail({ leg, onClose }) {
               const t = u.team ? TEAMS[u.team] : { name: 'Everyone', color: COLLECTIVE_COLOR };
               return (
                 <div key={i} className="rodeo-detail-col" style={{ borderColor: t.color }}>
-                  <h3 style={{ color: t.color }}>{t.name}{u.team && leg.points ? ` · ${leg.points[u.team] ?? 0} pts` : ''}</h3>
+                  <h3 style={{ color: t.color }}>
+                    {t.name}{u.team && leg.points ? ` · ${leg.points[u.team] ?? 0} pts` : ''}
+                    {u.team && leg.on_the_road?.[u.team] && <RoadBadge />}
+                  </h3>
                   {u.team && <ScoreChips leg={leg} team={u.team} u={u} listCountries />}
                   <div className="rodeo-stats">
                     {!u.team && legTime(u) && <span>⏱ {legTime(u)}</span>}

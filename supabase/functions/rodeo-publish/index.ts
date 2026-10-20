@@ -165,6 +165,28 @@ async function publish(admin: SupabaseClient) {
     waypointsByUpdate.get(w.update_id)!.push(w);
   }
 
+  // Pairs on the road right now: clock started, not yet arrived. Works off
+  // started_at whether or not the update is published, but only a boolean per
+  // team reaches the public JSON (never a time). Only a team's latest started
+  // leg counts, so a forgotten "We've arrived" tap on an old leg doesn't leave
+  // them travelling forever. Never fatal - it's a badge, not the snapshot.
+  const onTheRoad = new Map<string, Partial<Record<Team, boolean>>>();
+  try {
+    const started = await read(admin.from('rodeo_updates')
+      .select('leg_id,team,arrived_at,duration_minutes')
+      .not('started_at', 'is', null).not('team', 'is', null), 'rodeo_updates started');
+    const legNo = new Map<string, number>(legs.map((l) => [l.id, l.leg_no]));
+    for (const t of TEAM_KEYS) {
+      const latest = started.filter((u) => u.team === t)
+        .sort((a, b) => (legNo.get(b.leg_id) ?? 0) - (legNo.get(a.leg_id) ?? 0))[0];
+      if (latest && !latest.arrived_at && latest.duration_minutes == null) {
+        onTheRoad.set(latest.leg_id, { ...onTheRoad.get(latest.leg_id), [t]: true });
+      }
+    }
+  } catch (err) {
+    console.warn('on-the-road lookup failed', err);
+  }
+
   const updatesByLeg = new Map<string, Row[]>();
   for (const u of updates) {
     if (!updatesByLeg.has(u.leg_id)) updatesByLeg.set(u.leg_id, []);
@@ -184,6 +206,7 @@ async function publish(admin: SupabaseClient) {
       from_place: leg.from_place,
       to_place: leg.to_place,
       envelope_opened_at: leg.envelope_opened_at,
+      on_the_road: onTheRoad.get(lid) ?? null, // { ben?: true, miki?: true } while a pair is travelling
       points: perLeg[lid] ?? {},
       spend_summary: perLegSpend[lid] ?? null,
       winners: perLegWinners[lid] ?? null,
