@@ -521,11 +521,13 @@ export default function RodeoPublic() {
         if (p.u.team == null) return; // reunion legs are drawn once, below
         const place = [p.point.place_city, p.point.place_country].filter(Boolean).join(', ');
         const stop = !p.point.isWaypoint;
-        const toPlace = data.legs[p.legIndex].to_place;
-        const label = stop ? `${toPlace}${p.point.title ? ` - ${p.point.title}` : ''}` : (p.point.title || place);
+        // A stop is named for where its pin actually sits, not the leg's
+        // destination - they differ when the update was filed before arriving.
+        const stopName = place || data.legs[p.legIndex].to_place;
+        const label = stop ? `${stopName}${p.point.title ? ` - ${p.point.title}` : ''}` : (p.point.title || place);
         out.push({
           key: `${tk}-${p.ptKey}`, pt: p.pt, legIndex: p.legIndex, stop, radius: stop ? 7 : 5,
-          teams: [tk], together: false, place: toPlace,
+          teams: [tk], together: false, place: stopName,
           pulse: seen[tk] === p.ptKey ? [tk] : [],
           parts: [{ team: tk, label, detail: stop ? (p.point.title || '') : label, photo: p.point.photos?.[0]?.url }],
         });
@@ -535,7 +537,8 @@ export default function RodeoPublic() {
     collectivePoints.forEach((p) => {
       const place = [p.point.place_city, p.point.place_country].filter(Boolean).join(', ');
       const stop = !p.point.isWaypoint;
-      const label = stop ? data.legs[p.legIndex].to_place : (p.point.title || place);
+      const stopName = place || data.legs[p.legIndex].to_place;
+      const label = stop ? `${stopName}${p.point.title ? ` - ${p.point.title}` : ''}` : (p.point.title || place);
       out.push({
         key: `c-${p.ptKey}`, pt: p.pt, legIndex: p.legIndex, stop, radius: stop ? BOTH_STOP_RADIUS : 7,
         teams: ['ben', 'miki'], together: true, heading: 'Together',

@@ -343,6 +343,15 @@ export default function RodeoInput({ team, teamName, signOut }) {
     e.target.value = '';
   }
 
+  // Typing in the pin's Town/City or Country boxes. Emptying both takes the
+  // pin off the map (otherwise the old coordinates would silently stay).
+  function editPin(patch) {
+    setForm((f) => {
+      const next = { ...f, ...patch, geoStatus: '' };
+      return next.city.trim() || next.country.trim() ? next : { ...next, lat: '', lng: '' };
+    });
+  }
+
   // Resolve the typed Town/City + Country to a pin via Nominatim. Called on
   // blur, not per-keystroke, so we don't hammer the free lookup API.
   async function locate() {
@@ -727,12 +736,12 @@ export default function RodeoInput({ team, teamName, signOut }) {
             <div className="rodeo-grid2">
               <div>
                 <input placeholder="Town/city" value={form.city}
-                  onChange={(e) => setForm({ ...form, city: e.target.value, geoStatus: '' })}
+                  onChange={(e) => editPin({ city: e.target.value })}
                   onBlur={locate} />
               </div>
               <div>
                 <input placeholder="Country" value={form.country}
-                  onChange={(e) => setForm({ ...form, country: e.target.value, geoStatus: '' })}
+                  onChange={(e) => editPin({ country: e.target.value })}
                   onBlur={locate} />
               </div>
             </div>
