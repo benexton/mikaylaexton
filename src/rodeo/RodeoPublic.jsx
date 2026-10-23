@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, Polyline, CircleMarker, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, Polyline, CircleMarker, Marker, Tooltip, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -32,7 +33,7 @@ const INTRO = [
     hero: true,
     body: (
       <>
-        <p>Dots on the map are us: two dotted trails, one per team, curving apart so you can tell us apart even when we end up in the same spot.</p>
+        <p>Dots on the map are us: two dotted trails, one per team, curving apart between stops. A dot that is half blue, half orange is a checkpoint both teams have reached.</p>
         <p>The timeline runs down the middle, Ben &amp; John on the left, Miki &amp; Bruce on the right, and every so often the lanes merge into one card: that is a leg we travelled together, no points at stake, just snacks.</p>
         <p>Hover a dot for the gist, tap it for the full story. The scoreboard keeps the peace.</p>
       </>
@@ -41,7 +42,7 @@ const INTRO = [
     // drops it rather than just trimming words.
     mobileBody: (
       <>
-        <p>Dots on the map are us - one trail per team, curving apart so you can tell who's who.</p>
+        <p>Dots on the map are us - one trail per team, curving apart between stops. A half blue, half orange dot is a checkpoint we've both reached.</p>
         <p>The timeline runs Ben &amp; John on the left, Miki &amp; Bruce on the right. Where the lanes merge into one card, that's a leg we travelled together - no points, just snacks.</p>
         <p>Tap a dot for the full story.</p>
       </>
@@ -192,13 +193,7 @@ function ScoreboardBreakdown({ data }) {
 }
 
 // ---- map geometry -----------------------------------------------------------
-const OFFSET = 0.22;        // degrees each team is nudged so co-located dots split
 const BOW = 0.16;           // curve bow as a fraction of segment length
-
-function offsetPoint(lat, lng, teamKey) {
-  const s = teamKey === 'ben' ? -1 : 1;
-  return [lat + s * OFFSET, lng + s * OFFSET];
-}
 
 // Quadratic bezier through consecutive points, bowed to one side per team.
 function curved(points, teamKey) {
@@ -323,6 +318,80 @@ function declutter(map, zoom, markers) {
   });
 }
 
+// Where both teams have reached the same checkpoint, the two arrival dots
+// collapse into one bigger two-tone dot for as long as they'd otherwise touch.
+// Zoom in far enough and they part again, each at its true spot - the dots
+// are never nudged away from where the team actually was.
+const BOTH_STOP_RADIUS = 10;
+function mergeStops(map, zoom, markers) {
+  const arrivals = new Map(); // legIndex -> { ben, miki } arrival markers
+  markers.forEach((m) => {
+    if (!m.stop || m.teams.length !== 1) return;
+    const pair = arrivals.get(m.legIndex) ?? {};
+    pair[m.teams[0]] = m;
+    arrivals.set(m.legIndex, pair);
+  });
+  const merged = new Set();
+  const both = [];
+  arrivals.forEach(({ ben, miki }) => {
+    if (!ben || !miki) return;
+    const a = map.project(ben.pt, zoom), b = map.project(miki.pt, zoom);
+    if (a.distanceTo(b) >= ben.radius + miki.radius + DOT_GAP) return;
+    const mid = map.unproject(a.add(b).divideBy(2), zoom);
+    merged.add(ben); merged.add(miki);
+    both.push({
+      key: `both-${ben.key}`, pt: [mid.lat, mid.lng], legIndex: ben.legIndex, stop: true, radius: BOTH_STOP_RADIUS,
+      teams: ['ben', 'miki'], together: false, heading: ben.place,
+      pulse: [...ben.pulse, ...miki.pulse],
+      parts: [ben, miki].map((m) => ({ ...m.parts[0], label: m.parts[0].detail })),
+    });
+  });
+  return [...markers.filter((m) => !merged.has(m)), ...both];
+}
+
+// Left half Ben & John, right half Miki & Bruce (the timeline's lanes). A
+// reunion leg gets a gold ring instead of white. Icons are cached so a
+// re-render hands Leaflet the same object and the dot isn't rebuilt.
+const splitIcons = new Map();
+function splitIcon(radius, together) {
+  const k = `${radius}-${together}`;
+  if (!splitIcons.has(k)) {
+    const d = radius * 2;
+    splitIcons.set(k, L.divIcon({
+      className: 'rodeo-split-icon',
+      html: `<span class="rodeo-split${together ? ' together' : ''}" style="--a:${TEAMS.ben.color};--b:${TEAMS.miki.color};--ring:${COLLECTIVE_COLOR}"></span>`,
+      iconSize: [d, d], iconAnchor: [radius, radius], tooltipAnchor: [radius + 2, 0],
+    }));
+  }
+  return splitIcons.get(k);
+}
+
+function DotTooltip({ m }) {
+  const photos = m.parts.map((p) => p.photo).filter(Boolean);
+  const seen = !m.pulse.length ? null
+    : m.teams.length === 1 ? 'Last seen here, on the road'
+    : m.pulse.length > 1 ? 'Both pairs last seen here, on the road'
+    : `${TEAMS[m.pulse[0]].name} last seen here, on the road`;
+  return (
+    <>
+      {photos.length === 1 && <img className="rodeo-tooltip-thumb" src={photos[0]} alt="" />}
+      {photos.length > 1 && (
+        <div className="rodeo-tooltip-photos">
+          {photos.map((src, i) => <img key={i} className="rodeo-tooltip-thumb" src={src} alt="" />)}
+        </div>
+      )}
+      {m.heading && <><b>{m.heading}</b><br /></>}
+      {m.parts.map((p, i) => (
+        <div key={i}>
+          {p.team && <><b style={{ color: TEAMS[p.team].color }}>{TEAMS[p.team].name}</b><br /></>}
+          {p.label}
+        </div>
+      ))}
+      {seen && <em>{seen}</em>}
+    </>
+  );
+}
+
 function Markers({ markers, onSelect }) {
   const map = useMap();
   const [zoom, setZoom] = useState(() => map.getZoom());
@@ -332,21 +401,28 @@ function Markers({ markers, onSelect }) {
     return () => map.off('zoomend', onZoom);
   }, [map]);
 
-  const placed = useMemo(() => declutter(map, zoom, markers), [map, zoom, markers]);
+  const placed = useMemo(() => declutter(map, zoom, mergeStops(map, zoom, markers)), [map, zoom, markers]);
 
-  // A pulsing ring sits under the dot of a pair that's on the road. It's laid
-  // out from the decluttered position, so it stays on its dot, and it's not
-  // interactive, so taps still reach the dot.
+  // A pulsing ring sits under the dot of each pair that's on the road (two,
+  // staggered, when both are). It's laid out from the decluttered position,
+  // so it stays on its dot, and it's not interactive, so taps still reach the dot.
   return placed.flatMap((m) => [
-    m.pulse && (
-      <CircleMarker key={`${m.key}-pulse`} center={m.pt} radius={m.radius + 5}
-        pathOptions={{ color: m.color, weight: 3, fill: false, interactive: false, className: 'rodeo-pulse' }} />
+    ...m.pulse.map((tk, i) => (
+      <CircleMarker key={`${m.key}-pulse-${tk}`} center={m.pt} radius={m.radius + 5 + i * 4}
+        pathOptions={{ color: TEAMS[tk].color, weight: 3, fill: false, interactive: false, className: i ? 'rodeo-pulse alt' : 'rodeo-pulse' }} />
+    )),
+    m.teams.length > 1 ? (
+      <Marker key={m.key} position={m.pt} icon={splitIcon(m.radius, m.together)}
+        eventHandlers={{ click: () => onSelect(m.legIndex) }}>
+        <Tooltip><DotTooltip m={m} /></Tooltip>
+      </Marker>
+    ) : (
+      <CircleMarker key={m.key} center={m.pt} radius={m.radius}
+        pathOptions={{ color: '#fff', weight: 2, fillColor: TEAMS[m.teams[0]].color, fillOpacity: 1 }}
+        eventHandlers={{ click: () => onSelect(m.legIndex) }}>
+        <Tooltip><DotTooltip m={m} /></Tooltip>
+      </CircleMarker>
     ),
-    <CircleMarker key={m.key} center={m.pt} radius={m.radius}
-      pathOptions={{ color: '#fff', weight: 2, fillColor: m.color, fillOpacity: 1 }}
-      eventHandlers={{ click: () => onSelect(m.legIndex) }}>
-      <Tooltip>{m.tooltip}</Tooltip>
-    </CircleMarker>,
   ]);
 }
 
@@ -357,6 +433,7 @@ export default function RodeoPublic() {
   const [intro, setIntro] = useState(() => !introSeen());
   const [bannerOpen, setBannerOpen] = useState(true);
   const [view, setView] = useState('map');
+  const [newestFirst, setNewestFirst] = useState(true);
   const [openLeg, setOpenLeg] = useState(null);
   const isMobile = useIsMobile();
 
@@ -384,6 +461,8 @@ export default function RodeoPublic() {
 
   // point per team per leg (collective legs contribute a shared point to both);
   // a leg can now contribute several points per team, one per waypoint plus the summary.
+  // ptKey names a point by its leg and place in that leg's order, so the same
+  // spot can be recognised across both teams' paths and the collective list.
   const teamPaths = useMemo(() => {
     const paths = { ben: [], miki: [] };
     if (!data) return paths;
@@ -392,8 +471,8 @@ export default function RodeoPublic() {
       ['ben', 'miki'].forEach((tk) => {
         const u = leg.scope === 'together' ? collective : leg.updates.find((x) => x.team === tk);
         if (!u) return;
-        updatePoints(u).forEach((point) => {
-          paths[tk].push({ pt: offsetPoint(point.lat, point.lng, tk), legIndex: li, team: tk, u, point });
+        updatePoints(u).forEach((point, pi) => {
+          paths[tk].push({ pt: [point.lat, point.lng], legIndex: li, team: tk, u, point, ptKey: `${li}:${pi}` });
         });
       });
     });
@@ -407,7 +486,7 @@ export default function RodeoPublic() {
       if (leg.scope !== 'together') return;
       const u = leg.updates.find((x) => x.team == null);
       if (!u) return;
-      updatePoints(u).forEach((point) => out.push({ pt: [point.lat, point.lng], legIndex: li, u, point }));
+      updatePoints(u).forEach((point, pi) => out.push({ pt: [point.lat, point.lng], legIndex: li, u, point, ptKey: `${li}:${pi}` }));
     });
     return out;
   }, [data]);
@@ -423,48 +502,45 @@ export default function RodeoPublic() {
     // While a pair is on the road, ring their latest known position: their
     // newest waypoint on the current leg, else where the previous leg left them.
     // The leg's own summary pin doesn't count - that's the destination.
-    function lastSeenIndex(tk) {
+    function lastSeenKey(tk) {
       const li = data.legs.reduce((acc, l, i) => (l.on_the_road?.[tk] ? i : acc), -1);
-      let idx = -1;
+      let key = null;
       if (li >= 0) {
-        teamPaths[tk].forEach((p, i) => {
-          if (p.legIndex === li ? p.point.isWaypoint : p.legIndex < li) idx = i;
+        teamPaths[tk].forEach((p) => {
+          if (p.legIndex === li ? p.point.isWaypoint : p.legIndex < li) key = p.ptKey;
         });
       }
-      return idx;
+      return key;
     }
+    const seen = { ben: lastSeenKey('ben'), miki: lastSeenKey('miki') };
+
+    // Race legs: a dot per team per point. Where both teams reached the same
+    // stop, <Markers> merges the two arrival dots into one two-tone dot.
     ['ben', 'miki'].forEach((tk) => {
-      const seenAt = lastSeenIndex(tk);
-      teamPaths[tk].forEach((p, i) => {
+      teamPaths[tk].forEach((p) => {
+        if (p.u.team == null) return; // reunion legs are drawn once, below
         const place = [p.point.place_city, p.point.place_country].filter(Boolean).join(', ');
-        const label = p.point.isWaypoint
-          ? (p.point.title || place)
-          : `${data.legs[p.legIndex].to_place}${p.point.title ? ` - ${p.point.title}` : ''}`;
+        const stop = !p.point.isWaypoint;
+        const toPlace = data.legs[p.legIndex].to_place;
+        const label = stop ? `${toPlace}${p.point.title ? ` - ${p.point.title}` : ''}` : (p.point.title || place);
         out.push({
-          key: `${tk}-${i}`, pt: p.pt, radius: p.point.isWaypoint ? 5 : 7, color: TEAMS[tk].color, legIndex: p.legIndex,
-          pulse: i === seenAt,
-          tooltip: (
-            <>
-              {p.point.photos?.[0] && <img className="rodeo-tooltip-thumb" src={p.point.photos[0].url} alt="" />}
-              <b style={{ color: TEAMS[tk].color }}>{TEAMS[tk].name}</b><br />
-              {label}
-              {i === seenAt && <><br /><em>Last seen here, on the road</em></>}
-            </>
-          ),
+          key: `${tk}-${p.ptKey}`, pt: p.pt, legIndex: p.legIndex, stop, radius: stop ? 7 : 5,
+          teams: [tk], together: false, place: toPlace,
+          pulse: seen[tk] === p.ptKey ? [tk] : [],
+          parts: [{ team: tk, label, detail: stop ? (p.point.title || '') : label, photo: p.point.photos?.[0]?.url }],
         });
       });
     });
-    collectivePoints.forEach((p, i) => {
+    // Reunion legs: both teams are there, so one two-tone dot (gold-ringed).
+    collectivePoints.forEach((p) => {
       const place = [p.point.place_city, p.point.place_country].filter(Boolean).join(', ');
-      const label = p.point.isWaypoint ? (p.point.title || place) : data.legs[p.legIndex].to_place;
+      const stop = !p.point.isWaypoint;
+      const label = stop ? data.legs[p.legIndex].to_place : (p.point.title || place);
       out.push({
-        key: `c-${i}`, pt: p.pt, radius: p.point.isWaypoint ? 6 : 8, color: COLLECTIVE_COLOR, legIndex: p.legIndex,
-        tooltip: (
-          <>
-            {p.point.photos?.[0] && <img className="rodeo-tooltip-thumb" src={p.point.photos[0].url} alt="" />}
-            <b>Together</b><br />{label}
-          </>
-        ),
+        key: `c-${p.ptKey}`, pt: p.pt, legIndex: p.legIndex, stop, radius: stop ? BOTH_STOP_RADIUS : 7,
+        teams: ['ben', 'miki'], together: true, heading: 'Together',
+        pulse: ['ben', 'miki'].filter((tk) => seen[tk] === p.ptKey),
+        parts: [{ team: null, label, photo: p.point.photos?.[0]?.url }],
       });
     });
     return out;
@@ -482,6 +558,11 @@ export default function RodeoPublic() {
 
   const leader = data.scoreboard.ben === data.scoreboard.miki ? null
     : (data.scoreboard.ben > data.scoreboard.miki ? 'ben' : 'miki');
+
+  // Legs arrive in leg_no order. li stays each leg's index in data.legs (it's
+  // what openLeg points at) however the timeline is ordered.
+  const legsShown = data.legs.map((leg, li) => [leg, li]);
+  if (newestFirst) legsShown.reverse();
 
   return (
     <div className={`rodeo-public${view === 'map' ? ' map-view' : ''}`}>
@@ -552,15 +633,19 @@ export default function RodeoPublic() {
             <MapLock active={intro || openLeg != null} />
             <MapResizeSync />
           </MapContainer>
-          <p className="rodeo-map-note">Tap any dot for the full story. Both teams often land in the same city, so the trails curve apart.</p>
+          <p className="rodeo-map-note">Tap any dot for the full story. A half-and-half dot is a checkpoint both teams have reached; the trails curve apart in between.</p>
         </div>
       )}
 
       {view === 'timeline' && (
         <div className="rodeo-timeline">
           <ScoreboardBreakdown data={data} />
+          <div className="rodeo-order" role="group" aria-label="Order of legs">
+            <button type="button" className={newestFirst ? 'on' : ''} aria-pressed={newestFirst} onClick={() => setNewestFirst(true)}>Latest first</button>
+            <button type="button" className={newestFirst ? '' : 'on'} aria-pressed={!newestFirst} onClick={() => setNewestFirst(false)}>Oldest first</button>
+          </div>
           <div className="rodeo-spine" />
-          {data.legs.map((leg, li) => {
+          {legsShown.map(([leg, li]) => {
             if (leg.scope === 'together') {
               const u = leg.updates.find((x) => x.team == null);
               return (

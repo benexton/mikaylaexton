@@ -138,6 +138,11 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-scorecard-team h3 { font-family: var(--sans); font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
 .rodeo-scorecard-pts { display: flex; flex-wrap: wrap; gap: 12px; font-size: .88rem; color: var(--ink-soft); }
 
+/* newest-first / oldest-first switch, top of timeline (z-index masks the spine behind it) */
+.rodeo-order { position: relative; z-index: 1; display: flex; width: fit-content; margin: 0 auto; padding: 3px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 20px; }
+.rodeo-order button { background: none; border: 0; border-radius: 16px; padding: .3em 1em; font-size: .84rem; font-weight: 600; color: var(--ink-soft); cursor: pointer; }
+.rodeo-order button.on { background: var(--ink); color: #fff; }
+
 /* timeline */
 .rodeo-timeline { position: relative; max-width: 1000px; margin: 0 auto 60px; padding: 0 16px; }
 .rodeo-spine { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: repeating-linear-gradient(var(--line) 0 8px, transparent 8px 16px); transform: translateX(-1px); }
@@ -174,6 +179,13 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 
 /* map tooltip thumbnail */
 .rodeo-tooltip-thumb { display: block; width: 100%; max-width: 160px; height: 90px; object-fit: cover; border-radius: 6px; margin-bottom: 6px; }
+.rodeo-tooltip-photos { display: flex; gap: 4px; margin-bottom: 6px; }
+.rodeo-tooltip-photos .rodeo-tooltip-thumb { width: 78px; height: 70px; margin-bottom: 0; }
+
+/* two-tone map dot: a checkpoint both teams are at. Left half Ben & John, right half Miki & Bruce; gold ring = reunion leg. */
+.rodeo-split-icon { background: none; border: 0; }
+.rodeo-split { display: block; width: 100%; height: 100%; box-sizing: border-box; border: 2px solid #fff; border-radius: 50%; background: linear-gradient(90deg, var(--a) 50%, var(--b) 50%); }
+.rodeo-split.together { border: 3px solid var(--ring); }
 
 /* full gallery carousel, used in the leg detail modal */
 .rodeo-carousel { margin-top: 10px; }
@@ -233,6 +245,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 /* ring under a map dot (Leaflet path; stroke is animated, not transform, so it stays on its dot) */
 .rodeo-pulse { animation: rodeo-pulse 1.9s ease-out infinite; }
 @keyframes rodeo-pulse { from { stroke-opacity: .85; stroke-width: 2px; } to { stroke-opacity: 0; stroke-width: 10px; } }
+/* second ring when both pairs are on the road from the same dot: out of phase with the first */
+.rodeo-pulse.alt { animation-delay: -.95s; }
 @media (prefers-reduced-motion: reduce) {
   .rodeo-road-badge i { animation: none; }
   .rodeo-pulse { animation: none; stroke-opacity: .5; stroke-width: 4px; }
