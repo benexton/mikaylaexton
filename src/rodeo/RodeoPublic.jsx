@@ -33,7 +33,7 @@ const INTRO = [
     hero: true,
     body: (
       <>
-        <p>Dots on the map are us: two dotted trails, one per team, curving apart between stops. A dot that is half blue, half orange is a checkpoint both teams have reached.</p>
+        <p>Dots on the map are us: two dotted trails, one per team, curving apart when we race and running side by side when we travel together. A dot that is half blue, half orange is a checkpoint both teams have reached.</p>
         <p>The timeline runs down the middle, Ben &amp; John on the left, Miki &amp; Bruce on the right, and every so often the lanes merge into one card: that is a leg we travelled together, no points at stake, just snacks.</p>
         <p>Hover a dot for the gist, tap it for the full story. The scoreboard keeps the peace.</p>
       </>
@@ -194,26 +194,70 @@ function ScoreboardBreakdown({ data }) {
 
 // ---- map geometry -----------------------------------------------------------
 const BOW = 0.16;           // curve bow as a fraction of segment length
+const TRAIL_GAP = 7;        // px between the two trails where they run side by side
 
-// Quadratic bezier through consecutive points, bowed to one side per team.
-function curved(points, teamKey) {
-  if (points.length < 2) return points;
-  const sign = teamKey === 'ben' ? -1 : 1;
+// Quadratic bezier from one point to the next, bowed to one side per team.
+function arc([y0, x0], [y1, x1], sign) {
+  const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+  const dx = x1 - x0, dy = y1 - y0;
+  const cx = mx + sign * BOW * -dy, cy = my + sign * BOW * dx; // perpendicular control point
+  const steps = 22;
   const out = [];
-  for (let i = 0; i < points.length - 1; i++) {
-    const [y0, x0] = points[i], [y1, x1] = points[i + 1];
-    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
-    const dx = x1 - x0, dy = y1 - y0;
-    const cx = mx + sign * BOW * -dy, cy = my + sign * BOW * dx; // perpendicular control point
-    const steps = 22;
-    for (let t = 0; t <= steps; t++) {
-      const k = t / steps, ik = 1 - k;
-      const x = ik * ik * x0 + 2 * ik * k * cx + k * k * x1;
-      const y = ik * ik * y0 + 2 * ik * k * cy + k * k * y1;
-      out.push([y, x]);
-    }
+  for (let t = 0; t <= steps; t++) {
+    const k = t / steps, ik = 1 - k;
+    const x = ik * ik * x0 + 2 * ik * k * cx + k * k * x1;
+    const y = ik * ik * y0 + 2 * ik * k * cy + k * k * y1;
+    out.push([y, x]);
   }
   return out;
+}
+
+// A straight line from one point to the next, nudged TRAIL_GAP / 2 sideways in
+// screen pixels so the two teams' lines stay a fixed distance apart at any zoom.
+// side is +1 for the right of the direction of travel, -1 for the left.
+function parallel(map, zoom, from, to, side) {
+  const a = map.project(from, zoom), b = map.project(to, zoom);
+  const len = a.distanceTo(b);
+  if (len < 0.01) return [from, to];
+  const off = [side * (TRAIL_GAP / 2) * (a.y - b.y) / len, side * (TRAIL_GAP / 2) * (b.x - a.x) / len];
+  return [a, b].map((p) => {
+    const ll = map.unproject(p.add(off), zoom);
+    return [ll.lat, ll.lng];
+  });
+}
+
+// One team's trail through its points. The run to a stop on a leg we travelled
+// together is drawn as two parallel lines, since both pairs went the same way;
+// everywhere else (race legs) each pair's trail arcs to its own side.
+function trail(map, zoom, path, teamKey) {
+  if (path.length < 2) return path.map((p) => p.pt);
+  const sign = teamKey === 'ben' ? -1 : 1;
+  const out = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    const from = path[i].pt, to = path[i + 1].pt;
+    out.push(...(path[i + 1].u.team == null ? parallel(map, zoom, from, to, -sign) : arc(from, to, sign)));
+  }
+  return out;
+}
+
+function useZoom() {
+  const map = useMap();
+  const [zoom, setZoom] = useState(() => map.getZoom());
+  useEffect(() => {
+    const onZoom = () => setZoom(map.getZoom());
+    map.on('zoomend', onZoom);
+    return () => map.off('zoomend', onZoom);
+  }, [map]);
+  return zoom;
+}
+
+function Trails({ paths }) {
+  const map = useMap();
+  const zoom = useZoom();
+  return ['ben', 'miki'].map((tk) => (
+    <Polyline key={tk} positions={trail(map, zoom, paths[tk], tk)}
+      pathOptions={{ color: TEAMS[tk].color, weight: 2.5, dashArray: '2 8', lineCap: 'round' }} />
+  ));
 }
 
 // OpenFreeMap vector basemap (no key) with every label forced to the English
@@ -394,14 +438,9 @@ function DotTooltip({ m }) {
 
 function Markers({ markers, onSelect }) {
   const map = useMap();
-  const [zoom, setZoom] = useState(() => map.getZoom());
-  useEffect(() => {
-    const onZoom = () => setZoom(map.getZoom());
-    map.on('zoomend', onZoom);
-    return () => map.off('zoomend', onZoom);
-  }, [map]);
+  const zoom = useZoom();
 
-  const placed = useMemo(() => declutter(map, zoom, mergeStops(map, zoom, markers)), [map, zoom, markers]);
+  const placed =useMemo(() => declutter(map, zoom, mergeStops(map, zoom, markers)), [map, zoom, markers]);
 
   // A pulsing ring sits under the dot of each pair that's on the road (two,
   // staggered, when both are). It's laid out from the decluttered position,
@@ -628,15 +667,12 @@ export default function RodeoPublic() {
           <MapContainer center={[37, 10]} zoom={4} scrollWheelZoom style={{ flex: '1 1 auto', minHeight: 0, width: '100%' }}>
             <EnglishBasemap />
             <FitBounds points={allPoints} />
-            {['ben', 'miki'].map((tk) => (
-              <Polyline key={tk} positions={curved(teamPaths[tk].map((p) => p.pt), tk)}
-                pathOptions={{ color: TEAMS[tk].color, weight: 2.5, dashArray: '2 8', lineCap: 'round' }} />
-            ))}
+            <Trails paths={teamPaths} />
             <Markers markers={markers} onSelect={setOpenLeg} />
             <MapLock active={intro || openLeg != null} />
             <MapResizeSync />
           </MapContainer>
-          <p className="rodeo-map-note">Tap any dot for the full story. A half-and-half dot is a checkpoint both teams have reached; the trails curve apart in between.</p>
+          <p className="rodeo-map-note">Tap any dot for the full story. A half-and-half dot is a checkpoint both teams have reached; the trails curve apart when we race and run side by side when we travel together.</p>
         </div>
       )}
 
