@@ -717,7 +717,7 @@ export default function RodeoPublic() {
                       style={{ borderColor: TEAMS[tk].color }} onClick={() => u && setOpenLeg(li)}>
                       {!u ? (
                         <p className="rodeo-pending">
-                          {road ? <><RoadBadge /> {TEAMS[tk].name}: no story yet.</> : `${TEAMS[tk].name} has not filed yet.`}
+                          {road ? <><RoadBadge /> {TEAMS[tk].name}: no story yet.</> : `${TEAMS[tk].name} have not filed yet.`}
                         </p>
                       ) : (
                         <>
