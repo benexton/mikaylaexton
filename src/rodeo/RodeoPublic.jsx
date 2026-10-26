@@ -246,6 +246,10 @@ function useZoom() {
   useEffect(() => {
     const onZoom = () => setZoom(map.getZoom());
     map.on('zoomend', onZoom);
+    // FitBounds (an earlier sibling) can change the zoom before this effect has
+    // subscribed, so its zoomend is missed; re-read it now or dots stay laid out
+    // for the stale zoom until the next real zoom.
+    onZoom();
     return () => map.off('zoomend', onZoom);
   }, [map]);
   return zoom;
