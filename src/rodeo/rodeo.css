@@ -133,7 +133,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-public.map-view .rodeo-empty { flex: 1 1 auto; min-height: 0; }
 
 /* scoreboard breakdown, top of timeline */
-.rodeo-scorecard { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1000px; margin: 0 auto 34px; }
+.rodeo-scorecard { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1000px; margin: 0 auto 34px; }
 .rodeo-scorecard-team { background: var(--paper-2); border: 1px solid var(--line); border-top: 4px solid; border-radius: 14px; padding: 14px 18px; box-shadow: var(--shadow); }
 .rodeo-scorecard-team h3 { font-family: var(--sans); font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
 .rodeo-scorecard-pts { display: flex; flex-wrap: wrap; gap: 12px; font-size: .88rem; color: var(--ink-soft); }
@@ -148,12 +148,12 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-spine { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: repeating-linear-gradient(var(--line) 0 8px, transparent 8px 16px); transform: translateX(-1px); }
 .rodeo-leg.race { display: grid; grid-template-columns: 1fr 1fr; column-gap: 60px; position: relative; margin: 30px 0; }
 .rodeo-leg-marker { position: absolute; left: 50%; top: -6px; transform: translateX(-50%); background: var(--ink); color: #fff; font-family: var(--disp); font-weight: 600; font-size: .78rem; padding: 3px 12px; border-radius: 20px; z-index: 2; }
-.rodeo-card { background: var(--paper-2); border: 1px solid var(--line); border-top: 4px solid; border-radius: 14px; padding: 16px; box-shadow: var(--shadow); cursor: pointer; transition: transform .1s; }
+.rodeo-card { background: var(--paper-2); border: 1px solid var(--line); border-top: 4px solid; border-radius: 14px; padding: 16px; box-shadow: var(--shadow); cursor: pointer; transition: transform .1s; overflow-wrap: anywhere; }
 .rodeo-card:hover { transform: translateY(-3px); }
 .rodeo-card.side-left { grid-column: 1; }
 .rodeo-card.side-right { grid-column: 2; }
 .rodeo-card-head { display: flex; justify-content: space-between; font-weight: 600; }
-.rodeo-leg-pts { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 1px 9px; font-size: .8rem; color: var(--ink-soft); }
+.rodeo-leg-pts { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 1px 9px; font-size: .8rem; color: var(--ink-soft); white-space: nowrap; }
 .rodeo-card h3 { font-size: 1.1rem; margin-top: 6px; }
 .rodeo-stats { display: flex; flex-wrap: wrap; gap: 12px; font-size: .9rem; color: var(--ink-soft); margin: 4px 0 8px; }
 .rodeo-body { font-size: .93rem; text-align: left; }
@@ -161,7 +161,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-pending { color: var(--ink-soft); font-style: italic; }
 .rodeo-spend-line { grid-column: 1 / -1; width: fit-content; position: relative; z-index: 1; margin: 12px auto 0; background: var(--paper-2); border: 1px solid var(--line); border-radius: 20px; padding: 4px 14px; font-size: .88rem; color: var(--ink-soft); text-align: center; }
 .rodeo-leg.together { display: flex; justify-content: center; margin: 30px 0; position: relative; }
-.rodeo-merge-card { background: linear-gradient(180deg, #fff8e8, var(--paper-2)); border: 1px solid #ecdcb4; border-radius: 16px; padding: 20px; max-width: 640px; width: 100%; box-shadow: var(--shadow); cursor: pointer; text-align: center; }
+.rodeo-merge-card { background: linear-gradient(180deg, #fff8e8, var(--paper-2)); border: 1px solid #ecdcb4; border-radius: 16px; padding: 20px; max-width: 640px; width: 100%; min-width: 0; box-shadow: var(--shadow); cursor: pointer; text-align: center; overflow-wrap: anywhere; }
 .rodeo-leg-tag { font-family: var(--disp); font-size: .78rem; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: .08em; }
 .rodeo-nopoints { display: block; margin-top: 8px; font-size: .82rem; color: var(--ink-soft); }
 
@@ -252,7 +252,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
   .rodeo-pulse { animation: none; stroke-opacity: .5; stroke-width: 4px; }
 }
 
-.rodeo-new-badge { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; background: var(--terra); color: #fff; font-size: .65rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
+.rodeo-new-badge { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; background: var(--terra); color: #fff; font-size: .65rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; white-space: nowrap; }
 
 /* public comments, in the detail modal */
 .rodeo-comments { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
@@ -267,11 +267,15 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 
 /* mobile */
 @media (max-width: 760px) {
-  .rodeo-spine { left: 18px; }
-  .rodeo-leg.race { grid-template-columns: 1fr; row-gap: 12px; padding-left: 36px; }
+  .rodeo-timeline { padding: 0 12px; }
+  .rodeo-spine { left: 14px; }
+  /* minmax(0, 1fr), not 1fr: a bare 1fr can't shrink below its content, so long words or bigger text pushed the cards off screen. */
+  .rodeo-leg.race { grid-template-columns: minmax(0, 1fr); column-gap: 0; row-gap: 12px; padding-left: 22px; }
   .rodeo-card.side-left, .rodeo-card.side-right { grid-column: 1; }
-  .rodeo-leg-marker { left: 18px; transform: translateX(-50%); }
-  .rodeo-leg.together { padding-left: 36px; }
+  /* "Leg N" sits in the flow above its cards with a dot on the spine. Centred on the spine it hugged the screen edge and ran off it once Android's larger system text widened the pill. */
+  .rodeo-leg-marker { position: relative; left: auto; top: auto; transform: none; justify-self: start; margin-bottom: -4px; }
+  .rodeo-leg-marker::before { content: ''; position: absolute; left: -25px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 3px var(--paper); }
+  .rodeo-leg.together { padding-left: 22px; }
   .rodeo-newleg, .rodeo-grid2, .rodeo-detail-grid.two, .rodeo-scorecard { grid-template-columns: 1fr; }
   .rodeo-header { padding-top: 20px; grid-template-columns: 1fr 1fr; gap: 12px; }
   .rodeo-header .rodeo-masthead { order: -1; grid-column: 1 / -1; }
@@ -292,6 +296,6 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 /* per-leg scoring chips: winning time circled, trophy for cheapest, +points */
 .rodeo-score-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
 .rodeo-score-chip { display: inline-flex; align-items: center; gap: 6px; font-size: .86rem; color: var(--ink-soft); background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 3px 10px; }
-.rodeo-score-chip b { font-size: .76rem; font-weight: 700; color: var(--ink); background: var(--line); border-radius: 10px; padding: 0 6px; }
+.rodeo-score-chip b { font-size: .76rem; font-weight: 700; color: var(--ink); background: var(--line); border-radius: 10px; padding: 0 6px; white-space: nowrap; }
 .rodeo-score-chip.win { color: var(--ink); font-weight: 600; border: 2px solid var(--gold); background: #fff8e3; box-shadow: 0 0 0 3px rgba(201, 162, 39, .18); }
 .rodeo-score-chip.win b { background: var(--gold); color: #fff; }
