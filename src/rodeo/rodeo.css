@@ -197,10 +197,11 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-carousel-nav.next { right: 8px; }
 .rodeo-carousel-count { position: absolute; right: 8px; bottom: 8px; background: rgba(20,34,64,.72); color: #fff; font-size: .74rem; font-weight: 600; padding: 1px 8px; border-radius: 20px; }
 .rodeo-carousel-caption { font-size: .8rem; color: var(--ink-soft); margin: 6px 0 0; }
-.rodeo-carousel-thumbs { display: flex; gap: 6px; overflow-x: auto; margin-top: 8px; }
-.rodeo-carousel-thumb { flex: 0 0 auto; padding: 0; border: 2px solid transparent; border-radius: 6px; background: none; cursor: pointer; line-height: 0; opacity: .6; }
+/* thumbnails share the row's width (up to their old 52px) and wrap onto a second row when there are too many to stay legible, so there's never a sideways scroll */
+.rodeo-carousel-thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.rodeo-carousel-thumb { flex: 1 1 36px; max-width: 56px; padding: 0; border: 2px solid transparent; border-radius: 6px; background: none; cursor: pointer; line-height: 0; opacity: .6; }
 .rodeo-carousel-thumb.on { border-color: var(--sky); opacity: 1; }
-.rodeo-carousel-thumb img { width: 52px; height: 40px; object-fit: cover; border-radius: 4px; display: block; }
+.rodeo-carousel-thumb img { width: 100%; height: 40px; object-fit: cover; border-radius: 4px; display: block; }
 
 /* intro + detail modal */
 /* z-index 1200: comfortably above Leaflet's own control layer, which the
@@ -230,7 +231,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--s
 .rodeo-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
 .rodeo-dots span.on { background: var(--terra); }
 .rodeo-detail-grid.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.rodeo-detail-col { border-top: 4px solid; border-radius: 12px; background: var(--paper); padding: 14px; }
+/* min-width: 0 so a wide child (the photo thumbnail strip) scrolls inside the column instead of stretching it, and the grid track, past the modal's edge */
+.rodeo-detail-col { border-top: 4px solid; border-radius: 12px; background: var(--paper); padding: 14px; min-width: 0; overflow-wrap: anywhere; }
 .rodeo-detail-col h3 { font-family: var(--sans); font-size: 1.05rem; }
 
 /* waypoints stacked beneath a leg summary, in the detail modal */
